@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 9k <hun9k.github.io>
+Copyright © 2025 9k <hun9k.github.io>
 The MIT License (MIT)
 */
 package main
