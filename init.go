@@ -9,11 +9,25 @@ import (
 )
 
 func init() {
+	// fmt.Println("gapi init begin")
+
 	// 初始化配置
 	initConfig()
 
 	// 初始化日志
 	initLog()
+
+	// 初始化应用
+	initApp()
+
+	slog.Debug("gapi init end")
+}
+
+func initApp() {
+	slog.Debug("application init begin")
+	NewApp().
+		AddHttpService()
+	slog.Debug("application init end")
 }
 
 func initLog() {
@@ -30,6 +44,7 @@ func initLog() {
 
 	// 声明选项
 	options := &slog.HandlerOptions{}
+
 	// 设置最低级别日志
 	switch viper.GetString("mode") {
 	case "prod":
@@ -71,7 +86,7 @@ func initConfig() {
 
 // 设置默认值
 func configSetDefault() {
-	viper.SetDefault("name", "BACKEND API")
+	viper.SetDefault("name", "GAPI APP")
 	viper.SetDefault("mode", "dev")
 	viper.SetDefault("httpService.enabled", true)
 	viper.SetDefault("httpService.addr", ":8080")
