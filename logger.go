@@ -9,17 +9,19 @@ import (
 )
 
 // 日志Writter
-var logWriter io.Writer
+var _logWtr io.Writer
 
 func logWtr() io.Writer {
-	if logWriter == nil {
-		logWriter = newLogWriter()
+	if _logWtr != nil {
+		return _logWtr
 	}
 
-	return logWriter
+	_logWtr = newLogWtr()
+
+	return _logWtr
 }
 
-func newLogWriter() io.Writer {
+func newLogWtr() io.Writer {
 	var lw io.Writer
 	switch Conf().Log.Output {
 	case "file":
@@ -40,30 +42,29 @@ func newLogWriter() io.Writer {
 }
 
 // 日志组件
-type Logger struct {
-	*slog.Logger
-}
 
-var logger *Logger
+var _log *slog.Logger
 
-func Log() *Logger {
-	if logger == nil {
-		logger = newLogger()
+func Log() *slog.Logger {
+	if _log != nil {
+		return _log
 	}
 
-	return logger
+	_log = newLogger()
+
+	return _log
 }
 
-func newLogger() *Logger {
+func newLogger() *slog.Logger {
 	// 声明选项
 	options := &slog.HandlerOptions{}
 
 	// 设置最低级别日志
 	switch Conf().App.Mode {
-	case "prod":
+	case CONF_APP_MODE_PROD:
 		options.Level = slog.LevelInfo
-	case "dev":
-		fallthrough
+	// case CONF_APP_MODE_DEV, CONF_APP_MODE_TEST:
+	// 	fallthrough
 	default:
 		options.Level = slog.LevelDebug
 	}
@@ -83,7 +84,5 @@ func newLogger() *Logger {
 	// 全局logger
 	slog.SetDefault(lg)
 
-	return &Logger{
-		lg,
-	}
+	return lg
 }

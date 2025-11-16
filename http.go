@@ -4,26 +4,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type HttpService struct {
-	*gin.Engine
-}
-
-var httpService *HttpService
+var _httpSvc *gin.Engine
 
 // 获取HTTP服务对象
-func HttpSvc() *HttpService {
-	if httpService == nil {
-		httpService = newHttpService()
+func HttpSvc() *gin.Engine {
+	if _httpSvc != nil {
+		return _httpSvc
 	}
 
-	return httpService
+	_httpSvc = newHttpService()
+	return _httpSvc
 }
 
 // HttpSvc 's alias
 var HttpRouter, Router = HttpSvc, HttpSvc
 
 // 新建HTTP服务对象
-func newHttpService() *HttpService {
+func newHttpService() *gin.Engine {
 	// 模式
 	switch Conf().App.Mode {
 	case CONF_APP_MODE_TEST:
@@ -49,12 +46,5 @@ func newHttpService() *HttpService {
 	// 恢复
 	engine.Use(gin.Recovery())
 
-	return &HttpService{
-		engine,
-	}
-}
-
-func (service *HttpService) Listen() {
-	Log().Info("HTTP service is listening", "addr", Conf().HttpService.Addr)
-	service.Run(Conf().HttpService.Addr)
+	return engine
 }
