@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/hun9k/gapi"
 	"github.com/hun9k/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
 )
@@ -47,8 +48,8 @@ A module will be generated in gapi-module directory, and the module-path will be
 
 		// mod info
 		mod := modInfo{
-			modPath: args[0],
-			modBase: path.Base(args[0]),
+			ModPath: args[0],
+			ModBase: path.Base(args[0]),
 		}
 
 		// generate basic structure
@@ -75,22 +76,27 @@ A module will be generated in gapi-module directory, and the module-path will be
 			return
 		}
 
-		slog.Info("new module initialized", "module-path", mod.modPath)
-		slog.Info("please execute:")
-		slog.Info(fmt.Sprintf("cd %s", mod.modBase))
-		slog.Info("go mod tidy")
-		slog.Info("go run .")
+		// mod tidy
+		if err := modTidy(mod); err != nil {
+			slog.Error("mod tidy was failed", "error", err)
+			return
+		}
+
+		// success and tips
+		slog.Info("new module initialized", "module-path", mod.ModPath)
+		slog.Info("you should modify configs", "file", "configs.yaml")
+		slog.Info("and exec", "cmd", fmt.Sprintf("cd %s && go run .", mod.ModBase))
 	},
 }
 
 type modInfo struct {
-	modPath, modBase string
+	ModPath, ModBase string
 }
 
 // create module dir and change work dir to it
 func changeDir(mod modInfo) error {
 	// change work dir to module path
-	if err := os.Chdir(mod.modBase); err != nil {
+	if err := os.Chdir(mod.ModBase); err != nil {
 		return err
 	}
 
@@ -100,7 +106,7 @@ func changeDir(mod modInfo) error {
 // mod init
 func modInit(mod modInfo) error {
 	// execute `go mod init`
-	cmdModInit := exec.Command("go", "mod", "init", mod.modPath)
+	cmdModInit := exec.Command("go", "mod", "init", mod.ModPath)
 	if err := cmdModInit.Run(); err != nil {
 		return err
 	}
@@ -110,6 +116,17 @@ func modInit(mod modInfo) error {
 	if err := cmdModReplace.Run(); err != nil {
 		return err
 	}
+	return nil
+}
+
+// mod tidy
+func modTidy(mod modInfo) error {
+	// execute `go mod tidy`
+	cmd := exec.Command("go", "mod", "tidy")
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -123,13 +140,13 @@ type modFile struct {
 func genBasicStructure(mod modInfo) error {
 	// structured files
 	files := [...]modFile{
-		{true, mod.modBase, ""},
-		{false, "README.md", fmt.Sprintf("# %s\n", mod.modPath)},
-		{true, "apis", ""},
-		{false, "apis/README.md", "# your APIs in here\n"},
-		{true, "internal", ""},
-		{true, "internal/schemas", ""},
-		{false, "internal/schemas/README.md", "# your schemas in here\n"},
+		{true, mod.ModBase, ""},
+		{false, mod.ModBase + "/README.md", fmt.Sprintf("# %s\n", mod.ModPath)},
+		{true, mod.ModBase + "/apis", ""},
+		{false, mod.ModBase + "/apis/README.md", "# your APIs in here\n"},
+		{true, mod.ModBase + "/internal", ""},
+		{true, mod.ModBase + "/internal/schemas", ""},
+		{false, mod.ModBase + "/internal/schemas/README.md", "# your schemas in here\n"},
 	}
 	const dirMode, fileMode = 0754, 0640
 	for _, f := range files {
@@ -148,26 +165,26 @@ func genBasicStructure(mod modInfo) error {
 }
 
 type codeTmpl struct {
-	name, text, filename string
+	text, filename string
+	data           any
 }
 
 // generate basic codes
 func genBasicCodes(mod modInfo) error {
 	codeTmpls := [...]codeTmpl{
-		{"main", tmpls.Main, "main.go"},
-		{"api_groups", tmpls.Apis_group, "apis/groups.go"},
-		{"main", tmpls.Main, "main.go"},
-		{"main", tmpls.Main, "main.go"},
+		{tmpls.Main, "main.go", mod},
+		{tmpls.Apis_group, "apis/groups.go", mod},
+		{tmpls.Configs, "configs.yaml", gapi.NewDefaultConf()},
 	}
 
 	for _, ct := range codeTmpls {
-		tmpl := template.Must(template.New(ct.name).Parse(ct.text))
+		tmpl := template.Must(template.New(ct.filename).Parse(ct.text))
 		file, err := os.Create(ct.filename)
 		if err != nil {
 			return err
 		}
 		defer file.Close()
-		if err := tmpl.Execute(file, mod); err != nil {
+		if err := tmpl.Execute(file, ct.data); err != nil {
 			return err
 		}
 	}

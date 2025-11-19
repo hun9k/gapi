@@ -22,7 +22,7 @@ func Conf() *Config {
 
 func newConf() (*Config, error) {
 	// 默认配置
-	c := NewDefault()
+	c := NewDefaultConf()
 
 	// 初始化配置选项
 	if err := confRead(); err != nil {
@@ -135,7 +135,7 @@ const (
 	REDIS_DSN_DFT = ""
 )
 
-func NewDefault() *Config {
+func NewDefaultConf() *Config {
 	c := &Config{}
 	c.App.Name = APP_NAME_DFT
 	c.App.Mode = APP_MODE_DFT
