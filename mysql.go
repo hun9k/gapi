@@ -9,24 +9,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var _mysql *gorm.DB
-
-func MySQL() *gorm.DB {
-	if _mysql == nil {
-		o, err := newMySQL()
-		if err != nil {
-			Log().Warn("mysql failed", "error", err.Error())
-		}
-		_mysql = o
-	}
-	return _mysql
-}
-
 func newMySQL() (*gorm.DB, error) {
 	// logger 设置
 	logLevel := logger.Info
 	switch Conf().App.Mode {
-	case CONF_APP_MODE_PROD:
+	case APP_MODE_PROD:
 		logLevel = logger.Warn
 	// case CONF_APP_MODE_TEST, CONF_APP_MODE_DEV:
 	// 	fallthrough

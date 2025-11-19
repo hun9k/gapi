@@ -9,35 +9,32 @@ import (
 var _config *Config
 
 func Conf() *Config {
-	if _config != nil {
-		return _config
-	}
-
-	_config, err := newConf()
-	if err != nil {
-		slog.Warn("config failed", "error", err.Error())
+	if _config == nil {
+		c, err := newConf()
+		if err != nil {
+			slog.Warn("config failed", "error", err.Error())
+		}
+		_config = c
 	}
 
 	return _config
 }
 
 func newConf() (*Config, error) {
-	// 设置默认值
-	configSetDefault()
+	// 默认配置
+	c := NewDefault()
 
-	// 解析配置
-	c := Config{}
 	// 初始化配置选项
-	if err := configInit(); err != nil {
-		return &c, err
+	if err := confRead(); err != nil {
+		return c, err
 	}
 
 	// 解析为特定类型
 	if err := viper.Unmarshal(&c); err != nil {
-		return &c, err
+		return c, err
 	}
 
-	return &c, nil
+	return c, nil
 }
 
 type Config struct {
@@ -46,9 +43,9 @@ type Config struct {
 		Mode string `yaml:"mode,omitempty" json:"mode,omitempty"`
 	} `yaml:"app,omitempty" json:"app,omitempty"`
 	HttpService struct {
-		Enabled bool   `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-		Addr    string `yaml:"addr,omitempty" json:"addr,omitempty"`
-		Tls     bool   `yaml:"tls,omitempty" json:"tls,omitempty"`
+		Enable bool   `yaml:"enable,omitempty" json:"enable,omitempty"`
+		Addr   string `yaml:"addr,omitempty" json:"addr,omitempty"`
+		Tls    bool   `yaml:"tls,omitempty" json:"tls,omitempty"`
 	} `yaml:"http_service,omitempty" json:"http_service,omitempty"`
 	Log struct {
 		Format string `yaml:"format,omitempty" json:"format,omitempty"`
@@ -70,26 +67,26 @@ type Config struct {
 func (c *Config) Clean() *Config {
 	// app.mode
 	modes := map[string]struct{}{
-		CONF_APP_MODE_DEV: {}, CONF_APP_MODE_PROD: {}, CONF_APP_MODE_TEST: {},
+		APP_MODE_DEV: {}, APP_MODE_PROD: {}, APP_MODE_TEST: {},
 	}
 	if _, exists := modes[c.App.Mode]; !exists {
-		c.App.Mode = CONF_APP_MODE_DEFAULT
-		viper.Set("app.mode", CONF_APP_MODE_DEFAULT)
+		c.App.Mode = APP_MODE_DFT
+		viper.Set("app.mode", APP_MODE_DFT)
 	}
 
 	// log.format
 	formats := map[string]struct{}{
-		CONF_LOG_FORMAT_JSON: {}, CONF_LOG_FORMAT_TEXT: {},
+		LOG_FORMAT_JSON: {}, LOG_FORMAT_TEXT: {},
 	}
 	if _, exists := formats[c.Log.Format]; !exists {
-		c.Log.Format = CONF_LOG_FORMAT_DEFAULT
-		viper.Set("log.format", CONF_LOG_FORMAT_DEFAULT)
+		c.Log.Format = LOG_FORMAT_DFT
+		viper.Set("log.format", LOG_FORMAT_DFT)
 	}
 
 	return c
 }
 
-func configInit() error {
+func confRead() error {
 	// 解析配置文件
 	// 配置文件名称(无扩展名)
 	viper.SetConfigName("configs")
@@ -104,29 +101,58 @@ func configInit() error {
 	return nil
 }
 
+// config constants
 const (
-	CONF_APP_MODE_TEST = "test"
-	CONF_APP_MODE_PROD = "prod"
-	CONF_APP_MODE_DEV  = "dev"
-	CONF_APP_MODE_DEFAULT
+	// app
+	APP_NAME_DFT  = "GAPI APP"
+	APP_MODE_TEST = "test"
+	APP_MODE_PROD = "prod"
+	APP_MODE_DEV  = "dev"
+	APP_MODE_DFT
 
-	CONF_LOG_FORMAT_JSON = "json"
-	CONF_LOG_FORMAT_TEXT = "text"
-	CONF_LOG_FORMAT_DEFAULT
+	// httpService
+	HTTPSERVICE_ADDR_DFT    = ":8080"
+	HTTPSERVICE_ENABLED_DFT = true
+	HTTPSERVICE_TLS_DFT     = false
+
+	// log
+	LOG_FORMAT_JSON = "json"
+	LOG_FORMAT_TEXT = "text"
+	LOG_FORMAT_DFT
+	LOG_OUTPUT_FILE = "file"
+	LOG_OUTPUT_STD  = "std"
+	LOG_OUTPUT_DFT
+	LOG_FILE_FILENAME_DFT   = "logs/app.log"
+	LOG_FILE_MAXSIZE_DFT    = 512  // MB
+	LOG_FILE_MAXBACKUPS_DFT = 10   //
+	LOG_FILE_MAXAGE_DFT     = 30   //
+	LOG_FILE_COMPRESS_DFT   = true //
+
+	// mysql
+	MYSQL_DSN_DFT = "user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
+
+	// redis
+	REDIS_DSN_DFT = ""
 )
 
-// 设置默认值
-func configSetDefault() {
-	viper.SetDefault("app.name", "GAPI APP")
-	viper.SetDefault("app.mode", CONF_APP_MODE_DEFAULT)
-	viper.SetDefault("httpService.enabled", true)
-	viper.SetDefault("httpService.addr", ":8080")
-	viper.SetDefault("httpService.tls", false)
-	viper.SetDefault("log.format", CONF_LOG_FORMAT_DEFAULT)
-	viper.SetDefault("log.file.filename", "./app.log")
-	viper.SetDefault("log.file.maxSize", 100)
-	viper.SetDefault("log.file.maxBackups", 7)
-	viper.SetDefault("log.file.maxAge", 30)
-	viper.SetDefault("log.file.compress", true)
-	viper.SetDefault("mysql.dsn", "root:@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local")
+func NewDefault() *Config {
+	c := &Config{}
+	c.App.Name = APP_NAME_DFT
+	c.App.Mode = APP_MODE_DFT
+
+	c.HttpService.Enable = HTTPSERVICE_ENABLED_DFT
+	c.HttpService.Addr = HTTPSERVICE_ADDR_DFT
+	c.HttpService.Tls = HTTPSERVICE_TLS_DFT
+
+	c.Log.Format = LOG_FORMAT_DFT
+	c.Log.Output = LOG_OUTPUT_DFT
+	c.Log.File.Filename = LOG_FILE_FILENAME_DFT
+	c.Log.File.MaxSize = LOG_FILE_MAXSIZE_DFT
+	c.Log.File.MaxBackups = LOG_FILE_MAXBACKUPS_DFT
+	c.Log.File.MaxAge = LOG_FILE_MAXAGE_DFT
+	c.Log.File.Compress = LOG_FILE_COMPRESS_DFT
+
+	c.MySQL.DSN = MYSQL_DSN_DFT
+
+	return c
 }

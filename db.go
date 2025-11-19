@@ -4,16 +4,14 @@ import "gorm.io/gorm"
 
 var _db *gorm.DB
 
-func DB() *gorm.DB {
-	if _db != nil {
-		return _db
+func DB(k ...string) *gorm.DB {
+	if _db == nil {
+		db, err := newDB()
+		if err != nil {
+			Log().Warn("DB error", "error", err)
+		}
+		_db = db
 	}
-
-	db, err := newDB()
-	if err != nil {
-		Log().Warn("DB error", "error", err)
-	}
-	_db = db
 
 	return _db
 }

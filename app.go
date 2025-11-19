@@ -6,11 +6,9 @@ type Application struct{}
 var _app *Application
 
 func App() *Application {
-	if _app != nil {
-		return _app
+	if _app == nil {
+		_app = newApp()
 	}
-
-	_app = newApp()
 
 	return _app
 }
@@ -26,7 +24,7 @@ func (app *Application) Run() error {
 	Log().Info("application is running", "name", Conf().App.Name)
 
 	// HTTP服务监听
-	if Conf().HttpService.Enabled {
+	if Conf().HttpService.Enable {
 		Log().Info("HTTP service is listening", "addr", Conf().HttpService.Addr)
 		HttpSvc().Run(Conf().HttpService.Addr)
 	}

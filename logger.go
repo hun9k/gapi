@@ -12,11 +12,9 @@ import (
 var _logWtr io.Writer
 
 func logWtr() io.Writer {
-	if _logWtr != nil {
-		return _logWtr
+	if _logWtr == nil {
+		_logWtr = newLogWtr()
 	}
-
-	_logWtr = newLogWtr()
 
 	return _logWtr
 }
@@ -61,7 +59,7 @@ func newLogger() *slog.Logger {
 
 	// 设置最低级别日志
 	switch Conf().App.Mode {
-	case CONF_APP_MODE_PROD:
+	case APP_MODE_PROD:
 		options.Level = slog.LevelInfo
 	// case CONF_APP_MODE_DEV, CONF_APP_MODE_TEST:
 	// 	fallthrough
