@@ -11,8 +11,11 @@ const (
 	SCHEMAS_BASE      = "schemas"
 	README_BASE       = "README.md"
 	CONFIGS_BASE      = "configs.yaml"
+	GO_EXT            = ".go"
 	MAIN_BASE         = "main.go"
 	GROUP_ROUTER_BASE = "groups.go"
+	BIZS_BASE         = "bizs.go"
+	HANDLERS_BASE     = "handlers.go"
 )
 
 type codeTmpl struct {

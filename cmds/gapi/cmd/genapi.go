@@ -61,7 +61,7 @@ to quickly create a Cobra application.`,
 			// --bare
 			if *genapiBare {
 				codeTmpls = []codeTmpl{
-					{tmpls.Routers_resources_bare, filepath.Join(ROUTER_BASE, resource+".go"), rInfo},
+					{tmpls.Routers_resources_bare, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
 				}
 			}
 
@@ -72,9 +72,9 @@ to quickly create a Cobra application.`,
 				}
 
 				codeTmpls = []codeTmpl{
-					{tmpls.Routers_resources, filepath.Join(ROUTER_BASE, resource+".go"), rInfo},
-					{tmpls.Resource_bizs, filepath.Join(INTERNAL_BASE, resource, "bizs.go"), rInfo},
-					{tmpls.Resource_handlers, filepath.Join(INTERNAL_BASE, resource, "handlers.go"), rInfo},
+					{tmpls.Routers_resources, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
+					{tmpls.Resource_bizs, filepath.Join(INTERNAL_BASE, resource, BIZS_BASE), rInfo},
+					{tmpls.Resource_handlers, filepath.Join(INTERNAL_BASE, resource, HANDLERS_BASE), rInfo},
 				}
 			}
 
