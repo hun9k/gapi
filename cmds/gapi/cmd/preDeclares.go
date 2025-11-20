@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"golang.org/x/mod/modfile"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -31,8 +33,17 @@ type modInfo struct {
 
 type resourceInfo struct {
 	Mod      modInfo
-	Resource string
 	Version  string
+	Resource string
+	Schema   schemaInfo
+}
+
+type schemaInfo struct {
+	Name string
+}
+
+func resourceSchemaName(resource string) string {
+	return cases.Title(language.English).String(resource)
 }
 
 const (

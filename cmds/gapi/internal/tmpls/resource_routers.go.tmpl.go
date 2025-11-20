@@ -1,6 +1,6 @@
 package tmpls
 
-var Routers_resources = `package routers
+var Resource_routers = `package routers
 
 import (
 	"{{.Mod.Path}}/internal/{{.Resource}}"

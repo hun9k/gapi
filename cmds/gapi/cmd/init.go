@@ -21,9 +21,8 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init module-path",
 	Short: "初始化module",
-	Long: `用于初始化新module，会生成module的目录结构和基础代码。
-示例：
-gapi init github.com/hun9k/gapi-demo
+	Long: `用于初始化新module，会生成module的目录结构和基础代码。示例：
+	gapi init github.com/hun9k/gapi-demo
 会在gapi-demo目录创建module，module-path为github.com/hun9k/gapi-demo`,
 	// Args: cobra.ExactArgs(1),
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -38,7 +37,6 @@ gapi init github.com/hun9k/gapi-demo
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		slog.Info("开始init")
 		// mod info
 		mod := modInfo{
 			Path: args[0],

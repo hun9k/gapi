@@ -1,6 +1,6 @@
 package tmpls
 
-const Apis_group = `package apis
+const Apis_group = `package routers
 
 import (
 	"github.com/gin-gonic/gin"
