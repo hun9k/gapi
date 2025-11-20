@@ -3,6 +3,8 @@ package cmd
 import (
 	"html/template"
 	"os"
+
+	"golang.org/x/mod/modfile"
 )
 
 const (
@@ -49,7 +51,7 @@ func genStructure(files []structureFile) error {
 
 	for _, f := range files {
 		if f.isDir {
-			if err := os.Mkdir(f.filename, DIR_MODE); err != nil {
+			if err := os.Mkdir(f.filename, DIR_MODE); err != nil && !os.IsExist(err) {
 				return err
 			}
 		} else {
@@ -77,4 +79,21 @@ func genCodes(tmpls []codeTmpl) error {
 	}
 
 	return nil
+}
+
+func modFileByFile() (*modfile.File, error) {
+	goModFilename := "go.mod"
+	// 读取 go.mod 文件内容
+	modBytes, err := os.ReadFile(goModFilename)
+	if err != nil {
+		return nil, err
+	}
+
+	// 解析 go.mod 内容
+	modFile, err := modfile.Parse(goModFilename, modBytes, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return modFile, nil
 }

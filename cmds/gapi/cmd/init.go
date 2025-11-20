@@ -20,11 +20,11 @@ import (
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init module-path",
-	Short: "initialize an module's structure",
-	Long: `For example:
-gapi init github.com/hun9k/gapi-module
-
-A module will be generated in gapi-module directory, and the module-path will be github.com/hun9k/gapi-module.`,
+	Short: "初始化module",
+	Long: `用于初始化新module，会生成module的目录结构和基础代码。
+示例：
+gapi init github.com/hun9k/gapi-demo
+会在gapi-demo目录创建module，module-path为github.com/hun9k/gapi-demo`,
 	// Args: cobra.ExactArgs(1),
 	Args: func(cmd *cobra.Command, args []string) error {
 		// 必须指定一个module-path
@@ -38,6 +38,7 @@ A module will be generated in gapi-module directory, and the module-path will be
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		slog.Info("开始init")
 		// mod info
 		mod := modInfo{
 			Path: args[0],
@@ -49,25 +50,28 @@ A module will be generated in gapi-module directory, and the module-path will be
 			{true, mod.Base, ""},
 			{false, filepath.Join(mod.Base, README_BASE), fmt.Sprintf("# %s\n", mod.Path)},
 			{true, filepath.Join(mod.Base, ROUTER_BASE), ""},
-			{false, filepath.Join(mod.Base, ROUTER_BASE, README_BASE), "# your routers in here\n"},
+			{false, filepath.Join(mod.Base, ROUTER_BASE, README_BASE), "# 自定义路由在此\n"},
 			{true, filepath.Join(mod.Base, INTERNAL_BASE), ""},
 			{true, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE), ""},
-			{false, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE, README_BASE), "# your schemas in here\n"},
+			{false, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE, README_BASE), "# 表结构设计在此\n"},
 		}
+		slog.Info("开始生成基础结构")
 		if err := genStructure(basicFiles); err != nil {
-			slog.Error("generate basic structure failed", "error", err)
+			slog.Error("生成基础结构失败", "error", err)
 			return
 		}
 
 		// change dir to mod dir
+		slog.Info("开始切换目录")
 		if err := changeDir(mod); err != nil {
-			slog.Error("create and change dir failed", "error", err)
+			slog.Error("切换目录失败", "error", err)
 			return
 		}
 
 		// mod init
+		slog.Info("开始go mod init")
 		if err := modInit(mod); err != nil {
-			slog.Error("mod init failed", "error", err)
+			slog.Error("go mod init执行失败", "error", err)
 			return
 		}
 
@@ -77,21 +81,23 @@ A module will be generated in gapi-module directory, and the module-path will be
 			{tmpls.Apis_group, filepath.Join(ROUTER_BASE, GROUP_ROUTER_BASE), mod},
 			{tmpls.Main, MAIN_BASE, mod},
 		}
+		slog.Info("开始生成基础代码")
 		if err := genCodes(codeTmpls); err != nil {
-			slog.Error("generate basic codes failed", "error", err)
+			slog.Error("生成基础代码失败", "error", err)
 			return
 		}
 
 		// mod tidy
-		if err := modTidy(mod); err != nil {
-			slog.Error("mod tidy failed", "error", err)
-			return
-		}
+		// slog.Info("开始执行go mod tidy")
+		// if err := modTidy(mod); err != nil {
+		// 	slog.Error("go mod tidy执行失败", "error", err)
+		// 	return
+		// }
 
 		// success and tips
-		slog.Info("new module initialized", "module-path", mod.Path)
-		slog.Info("you should modify configs", "file", "configs.yaml")
-		slog.Info("and exec", "cmd", fmt.Sprintf("cd %s && go run .", mod.Base))
+		slog.Info("新module初始化于当前目录", "module-path", mod.Path)
+		slog.Info("通常需要修改配置文件以适应环境", "file", "configs.yaml")
+		slog.Info("接下来应执行", "cmd", fmt.Sprintf("cd %s && go mod tidy && go run .", mod.Base))
 	},
 }
 
@@ -112,10 +118,11 @@ func modInit(mod modInfo) error {
 	if err := cmdModInit.Run(); err != nil {
 		return err
 	}
+
 	// for dev, defer delete this command
 	//go mod edit -replace="github.com/hun9k/gapi"="D:/apps/gapi"
-	cmdModReplace := exec.Command("go", "mod", "edit", `-replace=github.com/hun9k/gapi=D:/apps/gapi`)
-	if err := cmdModReplace.Run(); err != nil {
+	cmd1 := exec.Command("go", "mod", "edit", `-replace=github.com/hun9k/gapi=D:/apps/gapi`)
+	if err := cmd1.Run(); err != nil {
 		return err
 	}
 	return nil
@@ -124,10 +131,15 @@ func modInit(mod modInfo) error {
 // mod tidy
 func modTidy(mod modInfo) error {
 	// execute `go mod tidy`
-	cmd := exec.Command("go", "mod", "tidy")
-	if err := cmd.Run(); err != nil {
-		return err
-	}
+	// cmd := exec.Command("go", "mod", "tidy")
+	// if err := cmd.Run(); err != nil {
+	// 	return err
+	// }
+
+	// cmd2 := exec.Command("go", "get", "github.com/hun9k/gapi/cmds/gapi/cmd@v0.0.0-00010101000000-000000000000")
+	// if err := cmd2.Run(); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

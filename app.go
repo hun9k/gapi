@@ -21,11 +21,9 @@ func newApp() *Application {
 
 // 运行应用
 func (app *Application) Run() error {
-	Log().Info("application is running", "name", Conf().App.Name)
-
 	// HTTP服务监听
 	if Conf().HttpService.Enable {
-		Log().Info("HTTP service is listening", "addr", Conf().HttpService.Addr)
+		Log().Debug("HTTP service is listening", "addr", Conf().HttpService.Addr)
 		HttpSvc().Run(Conf().HttpService.Addr)
 	}
 

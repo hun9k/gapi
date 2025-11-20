@@ -7,12 +7,10 @@ package cmd
 
 import (
 	"log/slog"
-	"os"
 	"path/filepath"
 
 	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/modfile"
 )
 
 // genapiCmd represents the genapi command
@@ -92,23 +90,6 @@ to quickly create a Cobra application.`,
 		}
 
 	},
-}
-
-func modFileByFile() (*modfile.File, error) {
-	goModFilename := "go.mod"
-	// 读取 go.mod 文件内容
-	modBytes, err := os.ReadFile(goModFilename)
-	if err != nil {
-		return nil, err
-	}
-
-	// 解析 go.mod 内容
-	modFile, err := modfile.Parse(goModFilename, modBytes, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return modFile, nil
 }
 
 var (
