@@ -6,9 +6,13 @@ The MIT License (MIT)
 package cmd
 
 import (
-	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
 
+	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/modfile"
 )
 
 // genapiCmd represents the genapi command
@@ -29,8 +33,82 @@ to quickly create a Cobra application.`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("genapi called", args, cmd.Flags)
+		// get module info
+		modFile, err := modFileByFile()
+		if err != nil {
+			slog.Error("get mod info failed", "error", err)
+			return
+		}
+		mod := modInfo{
+			Path: modFile.Module.Mod.Path,
+		}
+
+		// range all resources
+		resources := args
+		for _, resource := range resources {
+			rInfo := resourceInfo{
+				Mod:      mod,
+				Version:  *genapiVersion,
+				Resource: resource,
+			}
+
+			// generate structure
+			resourceFiles := []structureFile{}
+
+			// codeTmpls
+			codeTmpls := []codeTmpl{}
+
+			// --bare
+			if *genapiBare {
+				codeTmpls = []codeTmpl{
+					{tmpls.Routers_resources_bare, filepath.Join(ROUTER_BASE, resource+".go"), rInfo},
+				}
+			}
+
+			// --bare false (defalt)
+			if !*genapiBare {
+				resourceFiles = []structureFile{
+					{true, filepath.Join(INTERNAL_BASE, resource), ""},
+				}
+
+				codeTmpls = []codeTmpl{
+					{tmpls.Routers_resources, filepath.Join(ROUTER_BASE, resource+".go"), rInfo},
+					{tmpls.Resource_bizs, filepath.Join(INTERNAL_BASE, resource, "bizs.go"), rInfo},
+					{tmpls.Resource_handlers, filepath.Join(INTERNAL_BASE, resource, "handlers.go"), rInfo},
+				}
+			}
+
+			// generate structure
+			if err := genStructure(resourceFiles); err != nil {
+				slog.Error("generate resource structure failed", "error", err)
+				return
+			}
+
+			// generate codes
+			if err := genCodes(codeTmpls); err != nil {
+				slog.Error("generate resource codes failed", "error", err)
+				return
+			}
+		}
+
 	},
+}
+
+func modFileByFile() (*modfile.File, error) {
+	goModFilename := "go.mod"
+	// 读取 go.mod 文件内容
+	modBytes, err := os.ReadFile(goModFilename)
+	if err != nil {
+		return nil, err
+	}
+
+	// 解析 go.mod 内容
+	modFile, err := modfile.Parse(goModFilename, modBytes, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return modFile, nil
 }
 
 var (

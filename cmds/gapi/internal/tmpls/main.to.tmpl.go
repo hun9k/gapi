@@ -3,7 +3,7 @@ package tmpls
 const Main = `package main
 
 import (
-	_ "{{.ModPath}}/apis"
+	_ "{{.Path}}/routers"
 
 	"github.com/hun9k/gapi"
 )

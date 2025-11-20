@@ -6,14 +6,14 @@ package cmd
 
 import (
 	"fmt"
-	"html/template"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/hun9k/gapi"
-	"github.com/hun9k/gapi/internal/tmpls"
+	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
 )
 
@@ -38,64 +38,67 @@ A module will be generated in gapi-module directory, and the module-path will be
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// // work dir
-		// wd, err := os.Getwd()
-		// if err != nil {
-		// 	slog.Error("get work dir was failed", "error", err)
-		// 	return
-		// }
-
 		// mod info
 		mod := modInfo{
-			ModPath: args[0],
-			ModBase: path.Base(args[0]),
+			Path: args[0],
+			Base: path.Base(args[0]),
 		}
 
 		// generate basic structure
-		if err := genBasicStructure(mod); err != nil {
-			slog.Error("generate basic structure was failed", "error", err)
+		basicFiles := []structureFile{
+			{true, mod.Base, ""},
+			{false, filepath.Join(mod.Base, README_BASE), fmt.Sprintf("# %s\n", mod.Path)},
+			{true, filepath.Join(mod.Base, ROUTER_BASE), ""},
+			{false, filepath.Join(mod.Base, ROUTER_BASE, README_BASE), "# your routers in here\n"},
+			{true, filepath.Join(mod.Base, INTERNAL_BASE), ""},
+			{true, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE), ""},
+			{false, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE, README_BASE), "# your schemas in here\n"},
+		}
+		if err := genStructure(basicFiles); err != nil {
+			slog.Error("generate basic structure failed", "error", err)
 			return
 		}
 
 		// change dir to mod dir
 		if err := changeDir(mod); err != nil {
-			slog.Error("create and change dir was failed", "error", err)
+			slog.Error("create and change dir failed", "error", err)
 			return
 		}
 
 		// mod init
 		if err := modInit(mod); err != nil {
-			slog.Error("mod init was failed", "error", err)
+			slog.Error("mod init failed", "error", err)
 			return
 		}
 
 		// generate basic codes
-		if err := genBasicCodes(mod); err != nil {
-			slog.Error("generate basic codes was failed", "error", err)
+		codeTmpls := []codeTmpl{
+			{tmpls.Configs, CONFIGS_BASE, gapi.NewDefaultConf()},
+			{tmpls.Apis_group, filepath.Join(ROUTER_BASE, GROUP_ROUTER_BASE), mod},
+			{tmpls.Main, MAIN_BASE, mod},
+		}
+		if err := genCodes(codeTmpls); err != nil {
+			slog.Error("generate basic codes failed", "error", err)
 			return
 		}
 
 		// mod tidy
 		if err := modTidy(mod); err != nil {
-			slog.Error("mod tidy was failed", "error", err)
+			slog.Error("mod tidy failed", "error", err)
 			return
 		}
 
 		// success and tips
-		slog.Info("new module initialized", "module-path", mod.ModPath)
+		slog.Info("new module initialized", "module-path", mod.Path)
 		slog.Info("you should modify configs", "file", "configs.yaml")
-		slog.Info("and exec", "cmd", fmt.Sprintf("cd %s && go run .", mod.ModBase))
+		slog.Info("and exec", "cmd", fmt.Sprintf("cd %s && go run .", mod.Base))
 	},
-}
-
-type modInfo struct {
-	ModPath, ModBase string
 }
 
 // create module dir and change work dir to it
 func changeDir(mod modInfo) error {
 	// change work dir to module path
-	if err := os.Chdir(mod.ModBase); err != nil {
+	if err := os.Chdir(mod.Base); err != nil {
 		return err
 	}
 
@@ -105,7 +108,7 @@ func changeDir(mod modInfo) error {
 // mod init
 func modInit(mod modInfo) error {
 	// execute `go mod init`
-	cmdModInit := exec.Command("go", "mod", "init", mod.ModPath)
+	cmdModInit := exec.Command("go", "mod", "init", mod.Path)
 	if err := cmdModInit.Run(); err != nil {
 		return err
 	}
@@ -124,68 +127,6 @@ func modTidy(mod modInfo) error {
 	cmd := exec.Command("go", "mod", "tidy")
 	if err := cmd.Run(); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-type modFile struct {
-	isDir    bool
-	filename string
-	content  string
-}
-
-// generate basic structure
-func genBasicStructure(mod modInfo) error {
-	// structured files
-	files := [...]modFile{
-		{true, mod.ModBase, ""},
-		{false, mod.ModBase + "/README.md", fmt.Sprintf("# %s\n", mod.ModPath)},
-		{true, mod.ModBase + "/routers", ""},
-		{false, mod.ModBase + "/routers/README.md", "# your routers in here\n"},
-		{true, mod.ModBase + "/internal", ""},
-		{true, mod.ModBase + "/internal/schemas", ""},
-		{false, mod.ModBase + "/internal/schemas/README.md", "# your schemas in here\n"},
-	}
-	const dirMode, fileMode = 0754, 0640
-	for _, f := range files {
-		if f.isDir {
-			if err := os.Mkdir(f.filename, dirMode); err != nil {
-				return err
-			}
-		} else {
-			if err := os.WriteFile(f.filename, []byte(f.content), fileMode); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-type codeTmpl struct {
-	text, filename string
-	data           any
-}
-
-// generate basic codes
-func genBasicCodes(mod modInfo) error {
-	codeTmpls := [...]codeTmpl{
-		{tmpls.Configs, "configs.yaml", gapi.NewDefaultConf()},
-		{tmpls.Apis_group, "routers/groups.go", mod},
-		{tmpls.Main, "main.go", mod},
-	}
-
-	for _, ct := range codeTmpls {
-		tmpl := template.Must(template.New(ct.filename).Parse(ct.text))
-		file, err := os.Create(ct.filename)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		if err := tmpl.Execute(file, ct.data); err != nil {
-			return err
-		}
 	}
 
 	return nil
