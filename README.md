@@ -1,2 +1,2 @@
 # gapi
-A web framework and tool for building APIs based on the Go language.
+基于Gin和其他常用包的的API框架以及命令行工具。

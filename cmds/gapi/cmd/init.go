@@ -5,7 +5,6 @@ The MIT License (MIT)
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -28,9 +27,9 @@ gapi init github.com/hun9k/gapi-module
 A module will be generated in gapi-module directory, and the module-path will be github.com/hun9k/gapi-module.`,
 	// Args: cobra.ExactArgs(1),
 	Args: func(cmd *cobra.Command, args []string) error {
-		// module-path is required
+		// 必须指定一个module-path
 		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
-			return errors.New("module-path is required")
+			return err
 		}
 		// check module-path
 		// if !utils.IsValidModulePath(args[0]) {
@@ -142,8 +141,8 @@ func genBasicStructure(mod modInfo) error {
 	files := [...]modFile{
 		{true, mod.ModBase, ""},
 		{false, mod.ModBase + "/README.md", fmt.Sprintf("# %s\n", mod.ModPath)},
-		{true, mod.ModBase + "/apis", ""},
-		{false, mod.ModBase + "/apis/README.md", "# your APIs in here\n"},
+		{true, mod.ModBase + "/routers", ""},
+		{false, mod.ModBase + "/routers/README.md", "# your routers in here\n"},
 		{true, mod.ModBase + "/internal", ""},
 		{true, mod.ModBase + "/internal/schemas", ""},
 		{false, mod.ModBase + "/internal/schemas/README.md", "# your schemas in here\n"},
@@ -172,9 +171,9 @@ type codeTmpl struct {
 // generate basic codes
 func genBasicCodes(mod modInfo) error {
 	codeTmpls := [...]codeTmpl{
-		{tmpls.Main, "main.go", mod},
-		{tmpls.Apis_group, "apis/groups.go", mod},
 		{tmpls.Configs, "configs.yaml", gapi.NewDefaultConf()},
+		{tmpls.Apis_group, "routers/groups.go", mod},
+		{tmpls.Main, "main.go", mod},
 	}
 
 	for _, ct := range codeTmpls {

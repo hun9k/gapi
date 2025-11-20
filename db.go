@@ -8,7 +8,7 @@ func DB(k ...string) *gorm.DB {
 	if _db == nil {
 		db, err := newDB()
 		if err != nil {
-			Log().Warn("DB error", "error", err)
+			Log().Error("DB error", "error", err)
 		}
 		_db = db
 	}
