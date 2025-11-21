@@ -6,6 +6,11 @@ The MIT License (MIT)
 package cmd
 
 import (
+	"errors"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"log/slog"
 	"path/filepath"
 
@@ -32,7 +37,7 @@ var genapiCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, resources []string) {
 		// slog.Info("flags", "version", *genapiVersion, "bare", *genapiBare)
 		// get module info
 		modFile, err := modFileByFile()
@@ -44,14 +49,19 @@ var genapiCmd = &cobra.Command{
 			Path: modFile.Module.Mod.Path,
 		}
 
+		// astTest("")
+		// slog.Info("ast test")
+		// return
+
 		// range all resources
-		resources := args
 		for _, resource := range resources {
 			rInfo := resourceInfo{
-				Mod:      mod,
-				Version:  *genapiVersion,
-				Resource: resource,
-				Schema:   schemaInfo{Name: resourceSchemaName(resource)},
+				Mod:               mod,
+				Version:           *genapiVersion,
+				Resource:          resource,
+				Schema:            schemaInfo{Name: resourceSchemaName(resource)},
+				ResourceBody:      resourceBody(resource),
+				ResourcePatchBody: resourcePatchBody(resource),
 			}
 
 			// generate structure
@@ -74,14 +84,12 @@ var genapiCmd = &cobra.Command{
 				}
 
 				codeTmpls = []codeTmpl{
-					// routers
-					{tmpls.Resource_routers, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
-					// schema
-					{tmpls.Resource_schemas, filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT), rInfo},
 					// bizs
 					{tmpls.Resource_bizs, filepath.Join(INTERNAL_BASE, resource, BIZS_BASE), rInfo},
 					// handlers
 					{tmpls.Resource_handlers, filepath.Join(INTERNAL_BASE, resource, HANDLERS_BASE), rInfo},
+					// routers
+					{tmpls.Resource_routers, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
 				}
 			}
 
@@ -101,6 +109,58 @@ var genapiCmd = &cobra.Command{
 		}
 
 	},
+}
+
+var astTest = parseSchema
+
+func parseSchema(resource string) (*string, error) {
+	// generate test
+
+	// parse schema file
+	fset := token.NewFileSet()
+	filename := filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT)
+	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+
+	// find schema struct
+	var schemaStruct *ast.StructType
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.TypeSpec:
+			schemaStruct = x.Type.(*ast.StructType)
+			return false
+		}
+		return true
+	})
+	if schemaStruct == nil {
+		return nil, errors.New("schema struct not found")
+	}
+
+	// range field list to find our field
+	for _, field := range schemaStruct.Fields.List {
+		fmt.Println(field.Names, field.Type, field.Tag, field.Comment)
+		switch t := field.Type.(type) {
+		case *ast.Ident:
+			fmt.Println(t.Name)
+		case *ast.SelectorExpr:
+			fmt.Println(t.X.(*ast.Ident).Name, t.Sel.Name)
+		}
+	}
+
+	return nil, nil
+
+}
+
+func resourceBody(resource string) string {
+	// parse resource schema
+
+	return ""
+}
+
+func resourcePatchBody(resource string) string {
+	return ""
 }
 
 var (

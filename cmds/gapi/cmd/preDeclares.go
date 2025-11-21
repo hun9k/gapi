@@ -35,10 +35,12 @@ type modInfo struct {
 }
 
 type resourceInfo struct {
-	Mod      modInfo
-	Version  string
-	Resource string
-	Schema   schemaInfo
+	Mod               modInfo
+	Version           string
+	Resource          string
+	Schema            schemaInfo
+	ResourceBody      string
+	ResourcePatchBody string
 }
 
 type schemaInfo struct {

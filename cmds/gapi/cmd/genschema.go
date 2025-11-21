@@ -29,8 +29,8 @@ var genschemaCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		slog.Info("生成资源资源结构代码开始", "args", args, "--hooks", *genschemaHooks)
+	Run: func(cmd *cobra.Command, resources []string) {
+		slog.Info("生成资源资源结构代码开始", "resources", resources, "--hooks", *genschemaHooks)
 
 		// get module info
 		modFile, err := modFileByFile()
@@ -42,7 +42,6 @@ var genschemaCmd = &cobra.Command{
 			Path: modFile.Module.Mod.Path,
 		}
 
-		resources := args
 		hs := parseHooks(*genschemaHooks)
 		for _, resource := range resources {
 			rInfo := resourceInfo{
@@ -56,9 +55,7 @@ var genschemaCmd = &cobra.Command{
 			}
 
 			// codeTmpls
-			codeTmpls := []codeTmpl{}
-
-			codeTmpls = []codeTmpl{
+			codeTmpls := []codeTmpl{
 				{tmpls.Resource_schemas, filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT), rInfo},
 			}
 
@@ -70,6 +67,7 @@ var genschemaCmd = &cobra.Command{
 			}
 		}
 		slog.Info("生成资源资源结构代码完成", "resources", resources)
+		slog.Info("接下来应自定义资源结构，然后生成API代码")
 
 	},
 }

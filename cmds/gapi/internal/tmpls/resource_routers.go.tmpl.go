@@ -12,8 +12,8 @@ func init() {
 	group.POST("", {{.Resource}}.Post)                       // 创建一个资源
 	group.DELETE(":id", {{.Resource}}.DeleteId)              // 删除一个资源
 	group.DELETE("", {{.Resource}}.Delete)                   // 删除多个资源
-	group.PATCH(":id/restore", {{.Resource}}.PatchIdRestore) // 恢复一个资源
-	group.PATCH("restore", {{.Resource}}.PatchRestore)       // 恢复多个资源
+	group.PATCH("restore/:id", {{.Resource}}.RestoreId)      // 恢复一个资源
+	group.PATCH("restore", {{.Resource}}.Restore)            // 恢复多个资源
 	group.PUT(":id", {{.Resource}}.PutId)                    // 更新一个资源
 	group.PUT("", {{.Resource}}.Put)                         // 更新多个资源
 	group.PATCH(":id", {{.Resource}}.PatchId)                // 更新一个资源的部分字段

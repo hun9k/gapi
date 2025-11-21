@@ -1,10 +1,10 @@
 package gapi
 
-type ReqId struct {
+type QueryStrId struct {
 	ID uint `form:"id" json:"id,omitempty"`
 }
 
-type Req struct {
+type QueryStr struct {
 	Sort   [2]string `form:"sort" json:"sort,omitempty"`   // [field, method]
 	Range  [2]int    `form:"range" json:"range,omitempty"` // [start, end]
 	Page   [2]int    `form:"page" json:"page,omitempty"`   // [page, limit]

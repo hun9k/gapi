@@ -20,12 +20,12 @@ func Delete(ctx *gin.Context) {
 }
 
 // 恢复一个资源
-func PatchIdRestore(ctx *gin.Context) {
+func RestoreId(ctx *gin.Context) {
 
 }
 
 // 恢复多个资源
-func PatchRestore(ctx *gin.Context) {
+func Restore(ctx *gin.Context) {
 
 }
 

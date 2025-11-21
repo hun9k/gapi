@@ -6,91 +6,70 @@ import (
 	"github.com/hun9k/gapi"
 )
 
-// 创建一个资源
-type ReqPost struct {
-}
-type RespPost struct {
-	gapi.Resp
+// 创建资源
+type PostBody struct {
+	{{.ResourceBody}}
 }
 
 // 删除一个资源
-type ReqDeleteId struct {
-	gapi.ReqId
-}
-type RespDeleteId struct {
-	gapi.Resp
+type DeleteIdQuery struct {
+	gapi.QueryStrId
 }
 
 // 删除多个资源
-type ReqDelete struct {
-	gapi.Req
-}
-type RespDelete struct {
-	gapi.Resp
+type DeleteQuery struct {
+	gapi.QueryStr
 }
 
 // 恢复一个资源
-type ReqPatchIdRestore struct {
-	gapi.ReqId
-}
-type RespPatchIdRestore struct {
-	gapi.Resp
+type RestoreIdQuery struct {
+	gapi.QueryStrId
 }
 
 // 恢复多个资源
-type ReqPatchRestore struct {
-	gapi.Req
-}
-type RespPatchRestore struct {
-	gapi.Resp
+type RestoreQuery struct {
+	gapi.QueryStr
 }
 
 // 更新一个资源
-type ReqPutId struct {
-	gapi.ReqId
+type PutIdQuery struct {
+	gapi.QueryStrId
 }
-type RespPutId struct {
-	gapi.Resp
+type PutIdBody struct {
+	{{.ResourceBody}}
 }
 
 // 更新多个资源
-type ReqPut struct {
-	gapi.Req
+type PutQuery struct {
+	gapi.QueryStr
 }
-type RespPut struct {
-	gapi.Resp
+type PutBody struct {
+	{{.ResourceBody}}
 }
 
 // 更新一个资源的部分字段
-type ReqPatchId struct {
-	gapi.ReqId
+type PatchIdQuery struct {
+	gapi.QueryStrId
 }
-type RespPatchId struct {
-	gapi.Resp
+type PatchIdBody struct {
+	{{.ResourcePatchBody}}
 }
 
 // 更新多个资源的部分字段
-type ReqPatch struct {
-	gapi.Req
+type PatchQuery struct {
+	gapi.QueryStr
 }
-type RespPatch struct {
-	gapi.Resp
+type PatchBody struct {
 }
 
 // 获取一个资源
-type ReqGetId struct {
-	gapi.ReqId
-}
-type RespGetId struct {
-	gapi.Resp
+type GetIdQuery struct {
+	gapi.QueryStrId
 }
 
 // 获取多个资源
-type ReqGet struct {
-	gapi.Req
-}
-type RespGet struct {
-	gapi.Resp
+type GetQuery struct {
+	gapi.QueryStr
 }
 
 `
