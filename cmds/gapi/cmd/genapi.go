@@ -24,8 +24,7 @@ var genapiCmd = &cobra.Command{
 	internal/contents/handlers.go
 	internal/contents/bizs.go
 	......
-等代码
-`,
+等代码`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		// 必须指定至少一个resource
 		if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
@@ -34,7 +33,7 @@ var genapiCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// slog.Info("flags", "version", *genapiVersion, "bare", *genapiBare, "schema", *genapiSchema, "crud", *genapiCrud)
+		// slog.Info("flags", "version", *genapiVersion, "bare", *genapiBare)
 		// get module info
 		modFile, err := modFileByFile()
 		if err != nil {
@@ -62,7 +61,6 @@ var genapiCmd = &cobra.Command{
 			codeTmpls := []codeTmpl{}
 
 			// --bare
-			// if --bare == true will ignore --schema --crud
 			if *genapiBare {
 				codeTmpls = []codeTmpl{
 					{tmpls.Routers_resources_bare, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
@@ -88,14 +86,14 @@ var genapiCmd = &cobra.Command{
 			}
 
 			// generate structure
-			slog.Info("开始生成资源相关结构")
+			slog.Info("生成资源相关结构")
 			if err := genStructure(resourceFiles); err != nil {
 				slog.Error("生成资源相关结构失败", "error", err)
 				return
 			}
 
 			// generate codes
-			slog.Info("开始生成资源相关代码")
+			slog.Info("生成资源相关代码")
 			if err := genCodes(codeTmpls); err != nil {
 				slog.Error("生成资源相关代码失败", "error", err)
 				return

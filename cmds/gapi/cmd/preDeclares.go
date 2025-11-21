@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"html/template"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"golang.org/x/mod/modfile"
 	"golang.org/x/text/cases"
@@ -39,7 +42,9 @@ type resourceInfo struct {
 }
 
 type schemaInfo struct {
-	Name string
+	Name  string
+	Model bool
+	Hooks map[string]bool
 }
 
 func resourceSchemaName(resource string) string {
@@ -87,8 +92,23 @@ func genCodes(tmpls []codeTmpl) error {
 		if err := tmpl.Execute(file, ct.data); err != nil {
 			return err
 		}
+
+		// format code
+		fmtCode(ct.filename)
 	}
 
+	return nil
+}
+
+func fmtCode(filename string) error {
+	if filepath.Ext(filename) != GO_EXT {
+		return errors.New("non .go file")
+	}
+
+	cmd := exec.Command("go", "fmt", filename)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
 	return nil
 }
 
