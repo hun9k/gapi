@@ -1,4 +1,14 @@
-package gapi
+package biz
+
+const (
+	S_OK = iota
+	S_ERR
+)
+
+const (
+	M_OK  = "success"
+	M_ERR = "some error"
+)
 
 type QueryStrId struct {
 	ID uint `form:"id" json:"id,omitempty"`
@@ -13,16 +23,6 @@ type QueryStr struct {
 		Keyword string `form:"keyword" json:"keyword,omitempty"`
 	} `form:"filter" json:"filter,omitempty"`
 }
-
-const (
-	S_OK = iota
-	S_ERR
-)
-
-const (
-	M_OK  = "success"
-	M_ERR = "some error"
-)
 
 type Resp struct {
 	Status  int    `form:"status" json:"status,omitempty"`

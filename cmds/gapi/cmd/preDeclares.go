@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"errors"
+	"bytes"
+	"go/format"
 	"html/template"
 	"os"
-	"os/exec"
-	"path/filepath"
 
 	"golang.org/x/mod/modfile"
 	"golang.org/x/text/cases"
@@ -86,31 +85,24 @@ func genStructure(files []structureFile) error {
 func genCodes(tmpls []codeTmpl) error {
 	for _, ct := range tmpls {
 		tmpl := template.Must(template.New(ct.filename).Parse(ct.text))
-		file, err := os.Create(ct.filename)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		if err := tmpl.Execute(file, ct.data); err != nil {
+
+		src := new(bytes.Buffer)
+		if err := tmpl.Execute(src, ct.data); err != nil {
 			return err
 		}
 
 		// format code
-		fmtCode(ct.filename)
+		code, err := format.Source(src.Bytes())
+		if err != nil {
+			return err
+		}
+
+		// write
+		if err := os.WriteFile(ct.filename, code, FILE_MODE); err != nil {
+			return err
+		}
 	}
 
-	return nil
-}
-
-func fmtCode(filename string) error {
-	if filepath.Ext(filename) != GO_EXT {
-		return errors.New("non .go file")
-	}
-
-	cmd := exec.Command("go", "fmt", filename)
-	if err := cmd.Run(); err != nil {
-		return err
-	}
 	return nil
 }
 

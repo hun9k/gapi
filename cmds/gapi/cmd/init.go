@@ -12,8 +12,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/hun9k/gapi"
 	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
+	"github.com/hun9k/gapi/conf"
 	"github.com/spf13/cobra"
 )
 
@@ -75,7 +75,7 @@ var initCmd = &cobra.Command{
 
 		// generate basic codes
 		codeTmpls := []codeTmpl{
-			{tmpls.Configs, CONFIGS_BASE, gapi.NewDefaultConf()},
+			{tmpls.Configs, CONFIGS_BASE, conf.NewDefaultConf()},
 			{tmpls.Apis_group, filepath.Join(ROUTER_BASE, GROUP_ROUTER_BASE), mod},
 			{tmpls.Main, MAIN_BASE, mod},
 		}

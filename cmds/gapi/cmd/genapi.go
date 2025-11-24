@@ -7,12 +7,12 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"log/slog"
 	"path/filepath"
+	"strings"
 
 	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
@@ -49,19 +49,26 @@ var genapiCmd = &cobra.Command{
 			Path: modFile.Module.Mod.Path,
 		}
 
-		// astTest("")
+		// astTest("g")
 		// slog.Info("ast test")
-		// return
+		// // return
 
 		// range all resources
 		for _, resource := range resources {
+			// 资源结构
+			fields, err := parseSchema(resource)
+			if err != nil {
+				continue
+			}
+
+			// 资源信息
 			rInfo := resourceInfo{
 				Mod:               mod,
 				Version:           *genapiVersion,
 				Resource:          resource,
 				Schema:            schemaInfo{Name: resourceSchemaName(resource)},
-				ResourceBody:      resourceBody(resource),
-				ResourcePatchBody: resourcePatchBody(resource),
+				ResourceBody:      resourceBody(fields),
+				ResourcePatchBody: resourcePatchBody(fields),
 			}
 
 			// generate structure
@@ -113,9 +120,14 @@ var genapiCmd = &cobra.Command{
 
 var astTest = parseSchema
 
-func parseSchema(resource string) (*string, error) {
-	// generate test
+// 字段相关类型
+type fieldItem struct {
+	field, tp string
+}
+type fieldList = []fieldItem
 
+// 解析结构
+func parseSchema(resource string) (fieldList, error) {
 	// parse schema file
 	fset := token.NewFileSet()
 	filename := filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT)
@@ -138,29 +150,53 @@ func parseSchema(resource string) (*string, error) {
 		return nil, errors.New("schema struct not found")
 	}
 
+	fields := fieldList{}
 	// range field list to find our field
 	for _, field := range schemaStruct.Fields.List {
-		fmt.Println(field.Names, field.Type, field.Tag, field.Comment)
+		f := fieldItem{}
+		if len(field.Names) > 0 {
+			f.field = field.Names[0].Name
+		}
 		switch t := field.Type.(type) {
 		case *ast.Ident:
-			fmt.Println(t.Name)
+			f.tp = t.Name
 		case *ast.SelectorExpr:
-			fmt.Println(t.X.(*ast.Ident).Name, t.Sel.Name)
+			if t.Sel.Name == "Model" && t.X.(*ast.Ident).Name == "gapi" {
+				continue
+			}
+			f.tp = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+		case *ast.StarExpr:
+			switch tt := t.X.(type) {
+			case *ast.Ident:
+				f.tp = "*" + tt.Name
+			case *ast.SelectorExpr:
+				f.tp = "*" + tt.X.(*ast.Ident).Name + "." + tt.Sel.Name
+			}
 		}
+		fields = append(fields, f)
 	}
 
-	return nil, nil
-
+	return fields, nil
 }
 
-func resourceBody(resource string) string {
-	// parse resource schema
+func resourceBody(fields fieldList) string {
+	buf := new(strings.Builder)
+	for _, f := range fields {
+		buf.WriteString(f.field + " " + f.tp)
+		buf.WriteString("\n")
+	}
 
-	return ""
+	return buf.String()
 }
 
-func resourcePatchBody(resource string) string {
-	return ""
+func resourcePatchBody(fields fieldList) string {
+	buf := new(strings.Builder)
+	for _, f := range fields {
+		buf.WriteString(f.field + " " + f.tp)
+		buf.WriteString("\n")
+	}
+
+	return buf.String()
 }
 
 var (

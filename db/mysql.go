@@ -1,19 +1,21 @@
-package gapi
+package db
 
 import (
 	"log"
 	"time"
 
+	"github.com/hun9k/gapi/conf"
+	gapiLog "github.com/hun9k/gapi/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-func newMySQL() (*gorm.DB, error) {
+func mySQLNew() (*gorm.DB, error) {
 	// logger 设置
 	logLevel := logger.Info
-	switch Conf().App.Mode {
-	case APP_MODE_PROD:
+	switch conf.App().Mode {
+	case conf.AM_PROD:
 		logLevel = logger.Warn
 	// case CONF_APP_MODE_TEST, CONF_APP_MODE_DEV:
 	// 	fallthrough
@@ -21,7 +23,7 @@ func newMySQL() (*gorm.DB, error) {
 		logLevel = logger.Info
 	}
 	lger := logger.New(
-		log.New(logWtr(), "\n", log.LstdFlags),
+		log.New(gapiLog.LogWriter(), "\n", log.LstdFlags),
 		logger.Config{
 			SlowThreshold: time.Second,
 			// Colorful:                  false,
@@ -32,7 +34,7 @@ func newMySQL() (*gorm.DB, error) {
 	)
 
 	// connections
-	db, err := gorm.Open(mysql.Open(Conf().MySQL.DSN), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(conf.MySQL().DSN), &gorm.Config{
 		// SkipDefaultTransaction:    false,
 		// DefaultTransactionTimeout: 0,
 		// DefaultContextTimeout:     0,
