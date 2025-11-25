@@ -6,25 +6,26 @@ import (
 	"github.com/hun9k/gapi/log"
 )
 
-type RouterGroup struct {
-	*gin.RouterGroup
+// 获取Handler
+func Handler() *gin.Engine {
+	return handlerSingle()
 }
 
-type handler struct {
-	*gin.Engine
-}
+// single instance mode
+var _handler *gin.Engine
 
-func newHandler(opts ...gin.OptionFunc) *handler {
-	return &handler{
-		gin.New(opts...),
+func handlerSingle() *gin.Engine {
+	if _handler == nil {
+		_handler = handlerNew()
 	}
+	return _handler
 }
 
-// func defaultHandler() *handler {
-// 	return &handler{
-// 		gin.Default(),
-// 	}
-// }
+func handlerNew() *gin.Engine {
+	handlerSetLogWriter()
+	handlerSetMode()
+	return gin.Default()
+}
 
 func handlerSetMode() {
 	switch conf.App().Mode {

@@ -1,18 +1,21 @@
 package app
 
 import (
-	"github.com/hun9k/gapi/conf"
+	"sync"
+
 	"github.com/hun9k/gapi/http"
-	"github.com/hun9k/gapi/log"
 )
 
 // 运行应用
 func Run() {
+	wg := &sync.WaitGroup{}
 
-	// HTTP服务监听
-	if conf.Http().Enable {
-		if errs := http.Listen(); len(errs) > 0 {
-			log.Error("http listen error", "errors", errs)
-		}
-	}
+	// HTTP监听
+	wg.Go(func() {
+		http.Listen()
+	})
+
+	// task
+
+	wg.Wait()
 }
