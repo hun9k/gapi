@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var dbs map[string]*gorm.DB
+var dbs = map[string]*gorm.DB{}
 
 const (
 	DEFAULT_NAME = "default"

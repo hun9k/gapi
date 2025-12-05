@@ -73,7 +73,7 @@ const (
 	DB_DEFAULT_DSN    = "user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
 )
 
-var confs map[string]*viper.Viper
+var confs = map[string]*viper.Viper{}
 
 const (
 	EMPTY_KEY   = "configs"

@@ -8,7 +8,6 @@ import (
 
 // 运行应用
 func Run() {
-
 	// run services
 	wg := &sync.WaitGroup{}
 
