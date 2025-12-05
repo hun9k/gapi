@@ -7,9 +7,9 @@ api: # api服务配置
   enable: true # 是否启用
   addr: :8080 # 监听地址
   http3:
-    enable: true # 是否启用HTTP/3
+    enable: false # 是否启用HTTP/3
   tls: 
-    enable: true # 是否启用https
+    enable: false # 是否启用https
     addr: :8443
     certfile: localhost.pem
     keyfile: localhost-key.pem

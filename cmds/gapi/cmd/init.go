@@ -5,7 +5,6 @@ The MIT License (MIT)
 package cmd
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -33,69 +32,78 @@ var initCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// mod info
+		// curr work dir
 		wd, err := os.Getwd()
 		if err != nil {
 			slog.Warn("get workdir error", "error", err)
 			wd = "."
 		}
-		basePath := path.Base(args[0])
-		mod := modInfo{
-			Path: args[0],
-			Base: basePath,
-			Dir:  filepath.Join(wd, basePath),
-		}
 
-		// generate basic structure
-		dirs := []string{
-			mod.Dir,
-			filepath.Join(mod.Dir, "apis"),
-			filepath.Join(mod.Dir, "routers"),
-			filepath.Join(mod.Dir, "models"),
-			filepath.Join(mod.Dir, "handlers"),
+		// mod info
+		modPath := args[0]
+		modDir := filepath.Join(wd, path.Base(modPath))
+
+		// mk module dir
+		slog.Info("创建模块目录")
+		moduleDir := []string{
+			modDir,
 		}
-		slog.Info("开始创建基础目录")
-		if err := genDirs(dirs); err != nil {
-			slog.Error("创建基础目录失败", "error", err)
+		if err := genDirs(moduleDir); err != nil {
+			slog.Error("创建模块目录失败", "error", err)
 			return
 		}
-
 		// change dir to mod dir
-		slog.Info("开始切换目录")
-		if err := changeDir(mod); err != nil {
-			slog.Error("切换目录失败", "error", err)
+		slog.Info("切换模块目录")
+		if err := changeDir(modDir); err != nil {
+			slog.Error("切换模块目录失败", "error", err)
 			return
 		}
 
 		// mod init
-		slog.Info("开始go mod init")
-		if err := modInit(mod); err != nil {
-			slog.Error("go mod init执行失败", "error", err)
+		slog.Info("初始化模块")
+		if err := modInit(modPath); err != nil {
+			slog.Error("初始化模块失败", "error", err)
+			return
+		}
+
+		// make module dir
+		dirs := []string{
+			filepath.Join(modDir, "apis"),
+			filepath.Join(modDir, "routers"),
+			filepath.Join(modDir, "models"),
+			filepath.Join(modDir, "handlers"),
+		}
+
+		slog.Info("创建基本结构")
+		if err := genDirs(dirs); err != nil {
+			slog.Error("创建基本结构失败", "error", err)
 			return
 		}
 
 		// generate basic codes
 		codeTmpls := []codeTmpl{
-			{"# {{.Base}}\n", filepath.Join(mod.Dir, "README.md"), mod},
-			{tmpls.Configs, filepath.Join(mod.Dir, "configs.yaml"), nil},
-			{tmpls.RoutersPing, filepath.Join(mod.Dir, "routers", "ping.go"), mod},
-			{tmpls.Main, filepath.Join(mod.Dir, "main.go"), mod},
+			{"# {{.Base}}\n", filepath.Join(modDir, "README.md"), tmplData{"Base": modPath}},
+			{tmpls.Configs, filepath.Join(modDir, "configs.yaml"), nil},
+			{tmpls.RoutersPing, filepath.Join(modDir, "routers", "ping.go"), nil},
+			{tmpls.Main, filepath.Join(modDir, "main.go"), tmplData{"Path": modPath}},
 		}
-		slog.Info("开始生成基础代码")
+		slog.Info("生成基础代码")
 		if err := genCodes(codeTmpls); err != nil {
 			slog.Error("生成基础代码失败", "error", err)
 			return
 		}
 
 		// success and tips
-		slog.Info("接下来应执行", "cmd", fmt.Sprintf("cd %s && go mod tidy && go run .", mod.Base))
+		slog.Info("模块初始化成功，可以初始化代码版本库了")
+		slog.Info("接下来，创建openapi文件，生成代码")
+
 	},
 }
 
 // create module dir and change work dir to it
-func changeDir(mod modInfo) error {
+func changeDir(dir string) error {
 	// change work dir to module path
-	if err := os.Chdir(mod.Base); err != nil {
+	if err := os.Chdir(dir); err != nil {
 		return err
 	}
 
@@ -103,9 +111,9 @@ func changeDir(mod modInfo) error {
 }
 
 // mod init
-func modInit(mod modInfo) error {
+func modInit(path string) error {
 	// execute `go mod init`
-	cmdModInit := exec.Command("go", "mod", "init", mod.Path)
+	cmdModInit := exec.Command("go", "mod", "init", path)
 	if err := cmdModInit.Run(); err != nil {
 		return err
 	}
