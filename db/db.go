@@ -1,24 +1,40 @@
 package db
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/hun9k/gapi/conf"
 	"github.com/hun9k/gapi/log"
 	"gorm.io/gorm"
 )
 
-var _db *gorm.DB
+var dbs map[string]*gorm.DB
 
-func DB(k ...string) *gorm.DB {
-	if _db == nil {
-		db, err := dbNew()
+const (
+	DEFAULT_NAME = "default"
+)
+
+func Instance(ns ...string) *gorm.DB {
+	name := DEFAULT_NAME
+	if len(ns) > 0 {
+		name = ns[0]
+	}
+	if dbs[name] == nil {
+		db, err := dbNew(name)
 		if err != nil {
 			log.Error("DB error", "error", err)
 		}
-		_db = db
+		dbs[name] = db
 	}
 
-	return _db
+	return dbs[name]
 }
 
-func dbNew() (*gorm.DB, error) {
-	return mySQLNew()
+func dbNew(name string) (*gorm.DB, error) {
+	switch strings.ToLower(conf.Get[string](fmt.Sprintf("db.%s.driver", name))) {
+	case "mysql":
+		return newMySQL(name)
+	}
+	return nil, nil
 }

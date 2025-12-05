@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"github.com/gin-gonic/gin"
@@ -6,29 +6,33 @@ import (
 	"github.com/hun9k/gapi/log"
 )
 
-// 获取Handler
-func Handler() *gin.Engine {
-	return handlerSingle()
-}
-
 // single instance mode
-var _handler *gin.Engine
+var handlers map[string]*gin.Engine
 
-func handlerSingle() *gin.Engine {
-	if _handler == nil {
-		_handler = handlerNew()
+func Instance(ks ...string) *gin.Engine {
+	key := "" // default key
+	if len(ks) > 0 {
+		key = ks[0]
 	}
-	return _handler
+	if handlers == nil {
+		handlers[key] = newHandler()
+	}
+	return handlers[key]
 }
 
-func handlerNew() *gin.Engine {
-	handlerSetLogWriter()
-	handlerSetMode()
+func newHandler() *gin.Engine {
+	initGinHanler()
+
 	return gin.Default()
 }
 
+func initGinHanler() {
+	handlerSetLogWriter()
+	handlerSetMode()
+}
+
 func handlerSetMode() {
-	switch conf.App().Mode {
+	switch conf.Get[string]("app.mode") {
 	case conf.APP_MODE_TEST:
 		gin.SetMode(gin.TestMode)
 	case conf.APP_MODE_PROD:

@@ -26,7 +26,7 @@ func newLogger() *log {
 	options := &slog.HandlerOptions{}
 
 	// 设置最低级别日志
-	switch conf.App().Mode {
+	switch conf.Get[string]("app.mod") {
 	case conf.APP_MODE_PROD:
 		options.Level = slog.LevelInfo
 	// case CONF_APP_MODE_DEV, CONF_APP_MODE_TEST:
@@ -37,7 +37,7 @@ func newLogger() *log {
 
 	// 基于类型设置handler
 	var h slog.Handler
-	switch conf.Log().Format {
+	switch conf.Get[string]("log.format") {
 	case "json":
 		h = slog.NewJSONHandler(writerSingle(), options)
 	case "text":

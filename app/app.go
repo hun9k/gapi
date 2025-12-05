@@ -3,19 +3,25 @@ package app
 import (
 	"sync"
 
-	"github.com/hun9k/gapi/http"
+	"github.com/hun9k/gapi/services/api"
 )
 
 // 运行应用
 func Run() {
+
+	// run services
 	wg := &sync.WaitGroup{}
 
-	// HTTP监听
+	// api service
 	wg.Go(func() {
-		http.Listen()
+		api.Listen()
 	})
 
-	// task
+	// task service
+	wg.Go(func() {
+		// TODO
+	})
 
+	// wg wait
 	wg.Wait()
 }

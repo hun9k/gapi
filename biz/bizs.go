@@ -25,7 +25,8 @@ type QueryStr struct {
 }
 
 type Resp struct {
-	Status  int    `form:"status" json:"status,omitempty"`
-	Message string `form:"message" json:"message,omitempty"`
-	Data    any    `form:"data" json:"data,omitempty"`
+	Code     int               `json:"status"`
+	Message  string            `json:"message,omitempty"`
+	Messages map[string]string `json:"messages,omitempty"`
+	Data     any               `form:"data" json:"data,omitempty"`
 }

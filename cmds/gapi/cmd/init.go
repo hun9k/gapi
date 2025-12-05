@@ -75,7 +75,7 @@ var initCmd = &cobra.Command{
 
 		// generate basic codes
 		codeTmpls := []codeTmpl{
-			{tmpls.Configs, CONFIGS_BASE, conf.NewDefaultConf()},
+			{tmpls.Configs, CONFIGS_BASE, conf.Default()},
 			{tmpls.Apis_group, filepath.Join(ROUTER_BASE, GROUP_ROUTER_BASE), mod},
 			{tmpls.Main, MAIN_BASE, mod},
 		}

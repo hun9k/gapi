@@ -35,6 +35,8 @@ func Execute() {
 }
 
 func init() {
+	// Debug Level
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.

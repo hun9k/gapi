@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -11,11 +12,11 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func mySQLNew() (*gorm.DB, error) {
+func newMySQL(name string) (*gorm.DB, error) {
 	// logger 设置
 	logLevel := logger.Info
-	switch conf.App().Mode {
-	case conf.AM_PROD:
+	switch conf.Get[string]("app.mode") {
+	case conf.APP_MODE_PROD:
 		logLevel = logger.Warn
 	// case CONF_APP_MODE_TEST, CONF_APP_MODE_DEV:
 	// 	fallthrough
@@ -34,7 +35,7 @@ func mySQLNew() (*gorm.DB, error) {
 	)
 
 	// connections
-	db, err := gorm.Open(mysql.Open(conf.MySQL().DSN), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(conf.Get[string](fmt.Sprintf("db.%s.driver", name))), &gorm.Config{
 		// SkipDefaultTransaction:    false,
 		// DefaultTransactionTimeout: 0,
 		// DefaultContextTimeout:     0,
