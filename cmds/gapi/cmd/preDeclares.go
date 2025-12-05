@@ -3,8 +3,9 @@ package cmd
 import (
 	"bytes"
 	"go/format"
-	"html/template"
 	"os"
+	"path/filepath"
+	"text/template"
 
 	"golang.org/x/mod/modfile"
 	"golang.org/x/text/cases"
@@ -12,16 +13,7 @@ import (
 )
 
 const (
-	ROUTER_BASE       = "routers"
-	INTERNAL_BASE     = "internal"
-	SCHEMAS_BASE      = "schemas"
-	README_BASE       = "README.md"
-	CONFIGS_BASE      = "configs.yaml"
-	GO_EXT            = ".go"
-	MAIN_BASE         = "main.go"
-	GROUP_ROUTER_BASE = "groups.go"
-	BIZS_BASE         = "bizs.go"
-	HANDLERS_BASE     = "handlers.go"
+	GO_EXT = ".go"
 )
 
 type codeTmpl struct {
@@ -30,7 +22,7 @@ type codeTmpl struct {
 }
 
 type modInfo struct {
-	Path, Base string
+	Path, Base, Dir string
 }
 
 type resourceInfo struct {
@@ -57,24 +49,15 @@ const (
 	FILE_MODE = 0640
 )
 
-type structureFile struct {
-	isDir    bool
+type dir struct {
 	filename string
-	content  string
 }
 
 // generate structure
-func genStructure(files []structureFile) error {
-
-	for _, f := range files {
-		if f.isDir {
-			if err := os.Mkdir(f.filename, DIR_MODE); err != nil && !os.IsExist(err) {
-				return err
-			}
-		} else {
-			if err := os.WriteFile(f.filename, []byte(f.content), FILE_MODE); err != nil {
-				return err
-			}
+func genDirs(dirs []string) error {
+	for _, dir := range dirs {
+		if err := os.Mkdir(dir, DIR_MODE); err != nil && !os.IsExist(err) {
+			return err
 		}
 	}
 
@@ -84,17 +67,21 @@ func genStructure(files []structureFile) error {
 // generate codes
 func genCodes(tmpls []codeTmpl) error {
 	for _, ct := range tmpls {
-		tmpl := template.Must(template.New(ct.filename).Parse(ct.text))
+		tmpl, err := template.New("").Parse(ct.text)
+		if err != nil {
+			return err
+		}
 
 		src := new(bytes.Buffer)
 		if err := tmpl.Execute(src, ct.data); err != nil {
 			return err
 		}
 
-		// format code
-		code, err := format.Source(src.Bytes())
-		if err != nil {
-			return err
+		// format go code
+		code := src.Bytes()
+		if filepath.Ext(ct.filename) == GO_EXT {
+			c, _ := format.Source(src.Bytes())
+			code = c
 		}
 
 		// write

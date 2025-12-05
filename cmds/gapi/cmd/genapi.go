@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
 )
 
@@ -40,80 +39,80 @@ var genapiCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, resources []string) {
 		// slog.Info("flags", "version", *genapiVersion, "bare", *genapiBare)
 		// get module info
-		modFile, err := modFileByFile()
-		if err != nil {
-			slog.Error("获取module信息失败", "error", err)
-			return
-		}
-		mod := modInfo{
-			Path: modFile.Module.Mod.Path,
-		}
+		// modFile, err := modFileByFile()
+		// if err != nil {
+		// 	slog.Error("获取module信息失败", "error", err)
+		// 	return
+		// }
+		// mod := modInfo{
+		// 	Path: modFile.Module.Mod.Path,
+		// }
 
 		// astTest("g")
 		// slog.Info("ast test")
 		// // return
 
 		// range all resources
-		for _, resource := range resources {
-			// 资源结构
-			fields, err := parseSchema(resource)
-			if err != nil {
-				continue
-			}
+		// for _, resource := range resources {
+		// 资源结构
+		// fields, err := parseSchema(resource)
+		// if err != nil {
+		// 	continue
+		// }
 
-			// 资源信息
-			rInfo := resourceInfo{
-				Mod:               mod,
-				Version:           *genapiVersion,
-				Resource:          resource,
-				Schema:            schemaInfo{Name: resourceSchemaName(resource)},
-				ResourceBody:      resourceBody(fields),
-				ResourcePatchBody: resourcePatchBody(fields),
-			}
+		// 资源信息
+		// rInfo := resourceInfo{
+		// 	Mod:               mod,
+		// 	Version:           *genapiVersion,
+		// 	Resource:          resource,
+		// 	Schema:            schemaInfo{Name: resourceSchemaName(resource)},
+		// 	ResourceBody:      resourceBody(fields),
+		// 	ResourcePatchBody: resourcePatchBody(fields),
+		// }
 
-			// generate structure
-			resourceFiles := []structureFile{}
+		// generate structure
+		// resourceFiles := []dir{}
 
-			// codeTmpls
-			codeTmpls := []codeTmpl{}
+		// codeTmpls
+		codeTmpls := []codeTmpl{}
 
-			// --bare
-			if *genapiBare {
-				codeTmpls = []codeTmpl{
-					{tmpls.Routers_resources_bare, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
-				}
-			}
-
-			// --bare false (defalt)
-			if !*genapiBare {
-				resourceFiles = []structureFile{
-					{true, filepath.Join(INTERNAL_BASE, resource), ""},
-				}
-
-				codeTmpls = []codeTmpl{
-					// bizs
-					{tmpls.Resource_bizs, filepath.Join(INTERNAL_BASE, resource, BIZS_BASE), rInfo},
-					// handlers
-					{tmpls.Resource_handlers, filepath.Join(INTERNAL_BASE, resource, HANDLERS_BASE), rInfo},
-					// routers
-					{tmpls.Resource_routers, filepath.Join(ROUTER_BASE, resource+GO_EXT), rInfo},
-				}
-			}
-
-			// generate structure
-			slog.Info("生成资源相关结构")
-			if err := genStructure(resourceFiles); err != nil {
-				slog.Error("生成资源相关结构失败", "error", err)
-				return
-			}
-
-			// generate codes
-			slog.Info("生成资源相关代码")
-			if err := genCodes(codeTmpls); err != nil {
-				slog.Error("生成资源相关代码失败", "error", err)
-				return
+		// --bare
+		if *genapiBare {
+			codeTmpls = []codeTmpl{
+				// {tmpls.Routers_resources_bare, filepath.Join(ROUTERS_PATH_BASE, resource+GO_EXT), rInfo},
 			}
 		}
+
+		// --bare false (defalt)
+		if !*genapiBare {
+			// resourceFiles = []dir{
+			// 	// {true, filepath.Join(INTERNAL_BASE, resource), ""},
+			// }
+
+			codeTmpls = []codeTmpl{
+				// bizs
+				// {tmpls.Resource_bizs, filepath.Join(INTERNAL_BASE, resource, MESSAGES_BASE), rInfo},
+				// handlers
+				// {tmpls.Resource_handlers, filepath.Join(INTERNAL_BASE, resource, HANDLERS_BASE), rInfo},
+				// routers
+				// {tmpls.Resource_routers, filepath.Join(ROUTERS_PATH_BASE, resource+GO_EXT), rInfo},
+			}
+		}
+
+		// generate structure
+		// slog.Info("生成资源相关结构")
+		// if err := genDirs(resourceFiles); err != nil {
+		// 	slog.Error("生成资源相关结构失败", "error", err)
+		// 	return
+		// }
+
+		// generate codes
+		slog.Info("生成资源相关代码")
+		if err := genCodes(codeTmpls); err != nil {
+			slog.Error("生成资源相关代码失败", "error", err)
+			return
+		}
+		// }
 
 	},
 }
@@ -130,7 +129,7 @@ type fieldList = []fieldItem
 func parseSchema(resource string) (fieldList, error) {
 	// parse schema file
 	fset := token.NewFileSet()
-	filename := filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT)
+	filename := filepath.Join(resource + GO_EXT)
 	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
 		return nil, err

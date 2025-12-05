@@ -6,10 +6,8 @@ package cmd
 
 import (
 	"log/slog"
-	"path/filepath"
 	"strings"
 
-	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +54,7 @@ var genschemaCmd = &cobra.Command{
 
 			// codeTmpls
 			codeTmpls := []codeTmpl{
-				{tmpls.Resource_schemas, filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT), rInfo},
+				// {tmpls.Resource_schemas, filepath.Join(INTERNAL_BASE, SCHEMAS_BASE, resource+GO_EXT), rInfo},
 			}
 
 			// generate codes

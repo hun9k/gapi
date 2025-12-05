@@ -13,13 +13,12 @@ import (
 	"path/filepath"
 
 	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
-	"github.com/hun9k/gapi/conf"
 	"github.com/spf13/cobra"
 )
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
-	Use:   "init module-path",
+	Use:   "init <module-path>",
 	Short: "初始化module",
 	Long: `用于初始化新module，会生成module的目录结构和基础代码。示例：
 	gapi init github.com/hun9k/gapi-demo
@@ -30,32 +29,34 @@ var initCmd = &cobra.Command{
 		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
 			return err
 		}
-		// check module-path
-		// if !utils.IsValidModulePath(args[0]) {
-		// 	return errors.New("module-path is invalid")
-		// }
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// mod info
+		wd, err := os.Getwd()
+		if err != nil {
+			slog.Warn("get workdir error", "error", err)
+			wd = "."
+		}
+		basePath := path.Base(args[0])
 		mod := modInfo{
 			Path: args[0],
-			Base: path.Base(args[0]),
+			Base: basePath,
+			Dir:  filepath.Join(wd, basePath),
 		}
 
 		// generate basic structure
-		basicFiles := []structureFile{
-			{true, mod.Base, ""},
-			{false, filepath.Join(mod.Base, README_BASE), fmt.Sprintf("# %s\n", mod.Path)},
-			{true, filepath.Join(mod.Base, ROUTER_BASE), ""},
-			{false, filepath.Join(mod.Base, ROUTER_BASE, README_BASE), "# 自定义路由在此\n"},
-			{true, filepath.Join(mod.Base, INTERNAL_BASE), ""},
-			{true, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE), ""},
-			{false, filepath.Join(mod.Base, INTERNAL_BASE, SCHEMAS_BASE, README_BASE), "# 表结构设计在此\n"},
+		dirs := []string{
+			mod.Dir,
+			filepath.Join(mod.Dir, "apis"),
+			filepath.Join(mod.Dir, "routers"),
+			filepath.Join(mod.Dir, "models"),
+			filepath.Join(mod.Dir, "handlers"),
 		}
-		slog.Info("开始生成基础结构")
-		if err := genStructure(basicFiles); err != nil {
-			slog.Error("生成基础结构失败", "error", err)
+		slog.Info("开始创建基础目录")
+		if err := genDirs(dirs); err != nil {
+			slog.Error("创建基础目录失败", "error", err)
 			return
 		}
 
@@ -75,9 +76,10 @@ var initCmd = &cobra.Command{
 
 		// generate basic codes
 		codeTmpls := []codeTmpl{
-			{tmpls.Configs, CONFIGS_BASE, conf.Default()},
-			{tmpls.Apis_group, filepath.Join(ROUTER_BASE, GROUP_ROUTER_BASE), mod},
-			{tmpls.Main, MAIN_BASE, mod},
+			{"# {{.Base}}\n", filepath.Join(mod.Dir, "README.md"), mod},
+			{tmpls.Configs, filepath.Join(mod.Dir, "configs.yaml"), nil},
+			{tmpls.RoutersPing, filepath.Join(mod.Dir, "routers", "ping.go"), mod},
+			{tmpls.Main, filepath.Join(mod.Dir, "main.go"), mod},
 		}
 		slog.Info("开始生成基础代码")
 		if err := genCodes(codeTmpls); err != nil {
@@ -85,16 +87,7 @@ var initCmd = &cobra.Command{
 			return
 		}
 
-		// mod tidy
-		// slog.Info("开始执行go mod tidy")
-		// if err := modTidy(mod); err != nil {
-		// 	slog.Error("go mod tidy执行失败", "error", err)
-		// 	return
-		// }
-
 		// success and tips
-		slog.Info("新module初始化于当前目录", "module-path", mod.Path)
-		slog.Info("通常需要修改配置文件以适应环境", "file", "configs.yaml")
 		slog.Info("接下来应执行", "cmd", fmt.Sprintf("cd %s && go mod tidy && go run .", mod.Base))
 	},
 }
@@ -123,22 +116,6 @@ func modInit(mod modInfo) error {
 	if err := cmd1.Run(); err != nil {
 		return err
 	}
-	return nil
-}
-
-// mod tidy
-func modTidy(mod modInfo) error {
-	// execute `go mod tidy`
-	// cmd := exec.Command("go", "mod", "tidy")
-	// if err := cmd.Run(); err != nil {
-	// 	return err
-	// }
-
-	// cmd2 := exec.Command("go", "get", "github.com/hun9k/gapi/cmds/gapi/cmd@v0.0.0-00010101000000-000000000000")
-	// if err := cmd2.Run(); err != nil {
-	// 	return err
-	// }
-
 	return nil
 }
 
