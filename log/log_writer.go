@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/url"
@@ -12,28 +13,36 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// 日志Writter
-var writer io.Writer
+// Writter
+var writers = map[string]io.Writer{}
 
-func writerSingle() io.Writer {
-	if writer == nil {
-		writer = newWriter()
+const (
+	WRITER_NAME_DFT = "default"
+)
+
+func WriterInstance(ns ...string) io.Writer {
+	name := WRITER_NAME_DFT
+	if len(ns) > 0 {
+		name = ns[0]
+	}
+	if writers[name] == nil {
+		writers[name] = newWriter(name)
 	}
 
-	return writer
+	return writers[name]
 }
 
-func newWriter() io.Writer {
+func newWriter(name string) io.Writer {
 	// std
-	if conf.Get[string]("log.output") == "std" {
+	if conf.Get[string](fmt.Sprintf("log.%s.writer", name)) == conf.LOG_WRITER_STDOUT {
 		return os.Stdout
 	}
 
-	// parse output
-	output := conf.Get[string]("log.output")
-	out, err := url.Parse(output)
+	// parse writerUrl
+	writerUrl := conf.Get[string](fmt.Sprintf("log.%s.writer", name))
+	out, err := url.Parse(writerUrl)
 	if err != nil {
-		slog.Warn("log.output parse error", "error", err)
+		slog.Warn(fmt.Sprintf("log.%s.writer parse error", name), "error", err)
 		return os.Stdout
 	}
 

@@ -7,105 +7,70 @@ import (
 	"github.com/spf13/viper"
 )
 
-func Get[T any](path string, ks ...string) T {
+func Get[T any](path string, ns ...string) T {
 	var result T
 	switch any(result).(type) {
 	case string:
-		return any(instance(ks...).GetString(path)).(T)
+		return any(Inst(ns...).GetString(path)).(T)
 	case bool:
-		return any(instance(ks...).GetBool(path)).(T)
+		return any(Inst(ns...).GetBool(path)).(T)
 	case int:
-		return any(instance(ks...).GetInt(path)).(T)
+		return any(Inst(ns...).GetInt(path)).(T)
 	case int64:
-		return any(instance(ks...).GetInt64(path)).(T)
+		return any(Inst(ns...).GetInt64(path)).(T)
 	case float64:
-		return any(instance(ks...).GetFloat64(path)).(T)
+		return any(Inst(ns...).GetFloat64(path)).(T)
 	case time.Duration:
-		return any(instance(ks...).GetDuration(path)).(T)
+		return any(Inst(ns...).GetDuration(path)).(T)
 	case []string:
-		return any(instance(ks...).GetStringSlice(path)).(T)
+		return any(Inst(ns...).GetStringSlice(path)).(T)
 	case map[string]interface{}:
-		return any(instance(ks...).GetStringMap(path)).(T)
+		return any(Inst(ns...).GetStringMap(path)).(T)
 	case map[string]string:
-		return any(instance(ks...).GetStringMapString(path)).(T)
+		return any(Inst(ns...).GetStringMapString(path)).(T)
 	default:
 		// 对于自定义类型，尝试使用 Unmarshal
 		var target T
-		if err := instance(ks...).UnmarshalKey(path, &target); err != nil {
+		if err := Inst(ns...).UnmarshalKey(path, &target); err != nil {
 			slog.Error("failed to unmarshal key", "key", path, "error", err)
 		}
 		return target
 	}
 }
 
-// config constants
-const (
-	// app
-	APP_NAME_DFT  = "GAPI APP"
-	APP_MODE_TEST = "test"
-	APP_MODE_PROD = "prod"
-	APP_MODE_DEV  = "dev"
-	APP_MODE_DFT
-
-	// apiService
-	API_ENABLE_DFT       = true
-	API_ADDR_DFT         = ":8080"
-	API_HTTP3_ENABLE_DFT = true
-	API_TLS_ENABLE_DFT   = false
-	API_TLS_ADDR_DFT     = ":8443"
-	API_TLS_CERTFILE_DFT = "localhost.pem"
-	API_TLS_KEYFILE_DFT  = "localhost-key.pem"
-
-	// log
-	LOG_FORMAT_JSON = "json"
-	LOG_FORMAT_TEXT = "text"
-	LOG_FORMAT_DFT
-	LOG_LEVEL_DEBUG = slog.LevelDebug
-	LOG_LEVEL_WARN  = slog.LevelWarn
-	LOG_LEVEL_ERROR = slog.LevelError
-	LOG_LEVEL_INFO  = slog.LevelInfo
-	LOG_LEVEL_DEF
-	LOG_OUTPUT_DFT = "stdout"
-
-	// DB default
-	DB_DEFAULT_NAME   = ""
-	DB_DEFAULT_DRIVER = "mysql"
-	DB_DEFAULT_DSN    = "user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
-)
-
 var confs = map[string]*viper.Viper{}
 
 const (
-	EMPTY_KEY   = "configs"
-	DEFAULT_KEY = ""
+	EMPTY_NAME   = "configs"
+	DEFAULT_NAME = ""
 )
 
-// instance 是一个获取配置实例的函数
+// Inst 是一个获取配置实例的函数
 // 它使用单例模式确保全局只有一个配置实例
 // 返回值: *conf - 返回配置实例的指针
-func instance(ks ...string) *viper.Viper {
-	key := EMPTY_KEY
-	if len(ks) > 0 {
-		key = ks[0]
+func Inst(ns ...string) *viper.Viper {
+	name := EMPTY_NAME
+	if len(ns) > 0 {
+		name = ns[0]
 	}
 	// 检查配置实例是否已经被初始化
 	// 如果未初始化(_c == nil)，则创建一个新的配置实例
-	if confs[key] == nil {
-		confs[key] = newConf(key)
+	if confs[name] == nil {
+		confs[name] = newConf(name)
 	}
 
 	// 返回配置实例
-	return confs[key]
+	return confs[name]
 }
 
 func Default() *viper.Viper {
-	if confs[DEFAULT_KEY] == nil {
-		confs[DEFAULT_KEY] = viper.New()
+	if confs[DEFAULT_NAME] == nil {
+		confs[DEFAULT_NAME] = viper.New()
 		// 默认配置
-		setDefault(confs[DEFAULT_KEY])
+		setDefault(confs[DEFAULT_NAME])
 	}
 
-	return confs[DEFAULT_KEY]
+	return confs[DEFAULT_NAME]
 }
 
 /**
@@ -135,6 +100,43 @@ func newConf(key string) *viper.Viper {
 	return c
 }
 
+// config constants
+const (
+	// app
+	APP_NAME_DFT  = "GAPI APP"
+	APP_MODE_TEST = "test"
+	APP_MODE_PROD = "prod"
+	APP_MODE_DEV  = "dev"
+	APP_MODE_DFT
+
+	// apiService
+	API_ENABLE_DFT       = true
+	API_ADDR_DFT         = ":8080"
+	API_HTTP3_ENABLE_DFT = true
+	API_TLS_ENABLE_DFT   = false
+	API_TLS_ADDR_DFT     = ":8443"
+	API_TLS_CERTFILE_DFT = "localhost.pem"
+	API_TLS_KEYFILE_DFT  = "localhost-key.pem"
+
+	// log
+	LOG_FORMAT_JSON   = "json"
+	LOG_FORMAT_TEXT   = "text"
+	LOG_LEVEL_DEBUG   = slog.LevelDebug
+	LOG_LEVEL_WARN    = slog.LevelWarn
+	LOG_LEVEL_ERROR   = slog.LevelError
+	LOG_LEVEL_INFO    = slog.LevelInfo
+	LOG_WRITER_STDOUT = "stdout"
+	// default log
+	LOG_DEFAULT_FORMAT = LOG_FORMAT_TEXT
+	LOG_DEFAULT_LEVEL  = LOG_LEVEL_INFO
+	LOG_DEFAULT_WRITER = LOG_WRITER_STDOUT
+
+	// DB default
+	DB_DEFAULT_NAME   = ""
+	DB_DEFAULT_DRIVER = "mysql"
+	DB_DEFAULT_DSN    = "user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
+)
+
 func setDefault(c *viper.Viper) *viper.Viper {
 	c.SetDefault("app.name", APP_NAME_DFT)
 	c.SetDefault("app.mode", APP_MODE_DFT)
@@ -147,9 +149,9 @@ func setDefault(c *viper.Viper) *viper.Viper {
 	c.SetDefault("api.tls.certfile", API_TLS_CERTFILE_DFT)
 	c.SetDefault("api.tls.keyfile", API_TLS_KEYFILE_DFT)
 
-	c.SetDefault("log.format", LOG_FORMAT_DFT)
-	c.SetDefault("log.level", LOG_LEVEL_DEF)
-	c.SetDefault("log.output", LOG_OUTPUT_DFT)
+	c.SetDefault("log.default.format", LOG_DEFAULT_FORMAT)
+	c.SetDefault("log.default.level", LOG_DEFAULT_LEVEL)
+	c.SetDefault("log.default.writer", LOG_DEFAULT_WRITER)
 
 	c.SetDefault("db.default.driver", DB_DEFAULT_DRIVER)
 	c.SetDefault("db.default.dsn", DB_DEFAULT_DSN)
@@ -171,8 +173,8 @@ func clean(c *viper.Viper) *viper.Viper {
 	formats := map[string]struct{}{
 		LOG_FORMAT_JSON: {}, LOG_FORMAT_TEXT: {},
 	}
-	if _, exists := formats[c.GetString("log.format")]; !exists {
-		c.Set("log.format", LOG_FORMAT_DFT)
+	if _, exists := formats[c.GetString("log.default.format")]; !exists {
+		c.Set("log.default.format", LOG_DEFAULT_FORMAT)
 	}
 
 	return c

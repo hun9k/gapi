@@ -9,15 +9,15 @@ import (
 // single instance mode
 var handlers = map[string]*gin.Engine{}
 
-func Instance(ks ...string) *gin.Engine {
-	key := "" // default key
-	if len(ks) > 0 {
-		key = ks[0]
+func Inst(ns ...string) *gin.Engine {
+	name := "" // default key
+	if len(ns) > 0 {
+		name = ns[0]
 	}
 	if handlers == nil {
-		handlers[key] = newHandler()
+		handlers[name] = newHandler()
 	}
-	return handlers[key]
+	return handlers[name]
 }
 
 func newHandler() *gin.Engine {
@@ -46,5 +46,5 @@ func handlerSetMode() {
 
 func handlerSetLogWriter() {
 	// 日志Writer
-	gin.DefaultWriter = log.LogWriter()
+	gin.DefaultWriter = log.WriterInstance()
 }

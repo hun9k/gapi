@@ -22,7 +22,7 @@ func Listen() {
 	// http/2 or http/1.1 with no tls
 	wg.Go(func() {
 		log.Info("HTTP will listen", "addr", conf.Get[string]("api.addr"))
-		if err := http.ListenAndServe(conf.Get[string]("api.addr"), handler.Instance(API_HANDLER_KEY)); err != nil {
+		if err := http.ListenAndServe(conf.Get[string]("api.addr"), handler.Inst(API_HANDLER_NAME)); err != nil {
 			log.Error("HTTP listen error", "error", err)
 		}
 	})
@@ -31,7 +31,7 @@ func Listen() {
 		// http/2 or http/1.1 with tls
 		wg.Go(func() {
 			log.Info("HTTPS will listen", "addr", conf.Get[string]("api.tls.addr"))
-			if err := http.ListenAndServeTLS(conf.Get[string]("api.tls.addr"), conf.Get[string]("api.tls.certfile"), conf.Get[string]("api.tls.keyfile"), handler.Instance(API_HANDLER_KEY)); err != nil {
+			if err := http.ListenAndServeTLS(conf.Get[string]("api.tls.addr"), conf.Get[string]("api.tls.certfile"), conf.Get[string]("api.tls.keyfile"), handler.Inst(API_HANDLER_NAME)); err != nil {
 				log.Error("HTTPS listen error", "error", err)
 			}
 		})
@@ -41,7 +41,7 @@ func Listen() {
 	if conf.Get[bool]("api.http3.enable") {
 		wg.Go(func() {
 			log.Info("HTTP/3 will listen", "addr", conf.Get[string]("api.tls.addr"))
-			if err := http3.ListenAndServeQUIC(conf.Get[string]("api.tls.addr"), conf.Get[string]("api.tls.certfile"), conf.Get[string]("api.tls.keyfile"), handler.Instance(API_HANDLER_KEY)); err != nil {
+			if err := http3.ListenAndServeQUIC(conf.Get[string]("api.tls.addr"), conf.Get[string]("api.tls.certfile"), conf.Get[string]("api.tls.keyfile"), handler.Inst(API_HANDLER_NAME)); err != nil {
 				log.Error("HTTP/3 listen error", "error", err)
 			}
 		})
@@ -50,4 +50,4 @@ func Listen() {
 	wg.Wait()
 }
 
-const API_HANDLER_KEY = "api"
+const API_HANDLER_NAME = "api"

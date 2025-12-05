@@ -24,7 +24,7 @@ func newMySQL(name string) (*gorm.DB, error) {
 		logLevel = logger.Info
 	}
 	lger := logger.New(
-		log.New(gapiLog.LogWriter(), "\n", log.LstdFlags),
+		log.New(gapiLog.WriterInstance(), "\n", log.LstdFlags),
 		logger.Config{
 			SlowThreshold: time.Second,
 			// Colorful:                  false,
