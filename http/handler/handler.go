@@ -14,7 +14,7 @@ func Inst(ns ...string) *gin.Engine {
 	if len(ns) > 0 {
 		name = ns[0]
 	}
-	if handlers == nil {
+	if handlers[name] == nil {
 		handlers[name] = newHandler()
 	}
 	return handlers[name]

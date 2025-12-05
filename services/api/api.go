@@ -4,11 +4,16 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/gin-gonic/gin"
 	"github.com/hun9k/gapi/conf"
 	"github.com/hun9k/gapi/http/handler"
 	"github.com/hun9k/gapi/log"
 	"github.com/quic-go/quic-go/http3"
 )
+
+func Router() *gin.Engine {
+	return handler.Inst(API_HANDLER_NAME)
+}
 
 // http listen
 func Listen() {
