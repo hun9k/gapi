@@ -6,13 +6,7 @@ The MIT License (MIT)
 package cmd
 
 import (
-	"errors"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"log/slog"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -117,86 +111,86 @@ var genapiCmd = &cobra.Command{
 	},
 }
 
-var astTest = parseSchema
+// var astTest = parseSchema
 
-// 字段相关类型
-type fieldItem struct {
-	field, tp string
-}
-type fieldList = []fieldItem
+// // 字段相关类型
+// type fieldItem struct {
+// 	field, tp string
+// }
+// type fieldList = []fieldItem
 
-// 解析结构
-func parseSchema(resource string) (fieldList, error) {
-	// parse schema file
-	fset := token.NewFileSet()
-	filename := filepath.Join(resource + GO_EXT)
-	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
+// // 解析结构
+// func parseSchema(resource string) (fieldList, error) {
+// 	// parse schema file
+// 	fset := token.NewFileSet()
+// 	filename := filepath.Join(resource + GO_EXT)
+// 	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// find schema struct
-	var schemaStruct *ast.StructType
-	ast.Inspect(file, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.TypeSpec:
-			schemaStruct = x.Type.(*ast.StructType)
-			return false
-		}
-		return true
-	})
-	if schemaStruct == nil {
-		return nil, errors.New("schema struct not found")
-	}
+// 	// find schema struct
+// 	var schemaStruct *ast.StructType
+// 	ast.Inspect(file, func(n ast.Node) bool {
+// 		switch x := n.(type) {
+// 		case *ast.TypeSpec:
+// 			schemaStruct = x.Type.(*ast.StructType)
+// 			return false
+// 		}
+// 		return true
+// 	})
+// 	if schemaStruct == nil {
+// 		return nil, errors.New("schema struct not found")
+// 	}
 
-	fields := fieldList{}
-	// range field list to find our field
-	for _, field := range schemaStruct.Fields.List {
-		f := fieldItem{}
-		if len(field.Names) > 0 {
-			f.field = field.Names[0].Name
-		}
-		switch t := field.Type.(type) {
-		case *ast.Ident:
-			f.tp = t.Name
-		case *ast.SelectorExpr:
-			if t.Sel.Name == "Model" && t.X.(*ast.Ident).Name == "gapi" {
-				continue
-			}
-			f.tp = t.X.(*ast.Ident).Name + "." + t.Sel.Name
-		case *ast.StarExpr:
-			switch tt := t.X.(type) {
-			case *ast.Ident:
-				f.tp = "*" + tt.Name
-			case *ast.SelectorExpr:
-				f.tp = "*" + tt.X.(*ast.Ident).Name + "." + tt.Sel.Name
-			}
-		}
-		fields = append(fields, f)
-	}
+// 	fields := fieldList{}
+// 	// range field list to find our field
+// 	for _, field := range schemaStruct.Fields.List {
+// 		f := fieldItem{}
+// 		if len(field.Names) > 0 {
+// 			f.field = field.Names[0].Name
+// 		}
+// 		switch t := field.Type.(type) {
+// 		case *ast.Ident:
+// 			f.tp = t.Name
+// 		case *ast.SelectorExpr:
+// 			if t.Sel.Name == "Model" && t.X.(*ast.Ident).Name == "gapi" {
+// 				continue
+// 			}
+// 			f.tp = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+// 		case *ast.StarExpr:
+// 			switch tt := t.X.(type) {
+// 			case *ast.Ident:
+// 				f.tp = "*" + tt.Name
+// 			case *ast.SelectorExpr:
+// 				f.tp = "*" + tt.X.(*ast.Ident).Name + "." + tt.Sel.Name
+// 			}
+// 		}
+// 		fields = append(fields, f)
+// 	}
 
-	return fields, nil
-}
+// 	return fields, nil
+// }
 
-func resourceBody(fields fieldList) string {
-	buf := new(strings.Builder)
-	for _, f := range fields {
-		buf.WriteString(f.field + " " + f.tp)
-		buf.WriteString("\n")
-	}
+// func resourceBody(fields fieldList) string {
+// 	buf := new(strings.Builder)
+// 	for _, f := range fields {
+// 		buf.WriteString(f.field + " " + f.tp)
+// 		buf.WriteString("\n")
+// 	}
 
-	return buf.String()
-}
+// 	return buf.String()
+// }
 
-func resourcePatchBody(fields fieldList) string {
-	buf := new(strings.Builder)
-	for _, f := range fields {
-		buf.WriteString(f.field + " " + f.tp)
-		buf.WriteString("\n")
-	}
+// func resourcePatchBody(fields fieldList) string {
+// 	buf := new(strings.Builder)
+// 	for _, f := range fields {
+// 		buf.WriteString(f.field + " " + f.tp)
+// 		buf.WriteString("\n")
+// 	}
 
-	return buf.String()
-}
+// 	return buf.String()
+// }
 
 var (
 	genapiVersion *string
