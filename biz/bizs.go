@@ -10,8 +10,8 @@ const (
 	M_ERR = "some error"
 )
 
-type QueryStrId struct {
-	ID uint `form:"id" json:"id,omitempty"`
+type GetRowReq struct {
+	ID uint `uri:"id" form:"id" json:"id" binding:"required"`
 }
 
 type QueryStr struct {

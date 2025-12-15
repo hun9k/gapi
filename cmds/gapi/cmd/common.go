@@ -8,14 +8,13 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/getkin/kin-openapi/openapi3"
-	"go.yaml.in/yaml/v4"
 	"golang.org/x/mod/modfile"
 )
 
 const (
-	GO_EXT          = ".go"
-	OPENAPI_VERSION = "3.0.4"
+	GO_EXT    = ".go"
+	MODEL_DIR = "models"
+	LOCK_FILE = ".gapi.lock"
 )
 
 type codeTmpl struct {
@@ -28,84 +27,50 @@ const (
 	FILE_MODE = 0640
 )
 
-func genOpenApi() ([]byte, error) {
-	// schema
-	schema := openapi3.NewSchema()
-	schema.Type = &openapi3.Types{"object"}
-	schema.Properties = map[string]*openapi3.SchemaRef{
-		"StringField": {
-			Value: &openapi3.Schema{
-				Type:     &openapi3.Types{"string"},
-				Title:    "字符串类型",
-				Nullable: false,
-			},
-		},
-		"NullStringField": {
-			Value: &openapi3.Schema{
-				Type:     &openapi3.Types{"string"},
-				Title:    "可空字符串类型",
-				Nullable: true,
-			},
-		},
-	}
-
-	// schemas
-	schemas := openapi3.Schemas{
-		"contents": schema.NewRef(),
-	}
-
-	// components
-	components := openapi3.Components{
-		Schemas: schemas,
-	}
-
-	// openapi
-	doc := openapi3.T{
-		OpenAPI: OPENAPI_VERSION,
-	}
-	doc.Info = &openapi3.Info{
-		Title:   "gapi",
-		Version: "0.0.1",
-	}
-	doc.Paths = &openapi3.Paths{}
-	doc.Components = &components
-
-	// c, err := doc.MarshalYAML()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	out, err := yaml.Marshal(doc)
+func dirExists(path string) (bool, error) {
+	info, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
 	}
-	fmt.Println(string(out))
-
-	return out, nil
+	return info.IsDir(), nil
 }
 
 // generate structure
-func genDirs(dirs []string) error {
-	for _, dir := range dirs {
-		if err := os.Mkdir(dir, DIR_MODE); err != nil && !os.IsExist(err) {
-			return err
+func genDirs(dirs []string) []error {
+	errs := make([]error, len(dirs))
+	for i, dir := range dirs {
+		if err := os.MkdirAll(dir, DIR_MODE); err != nil && !os.IsExist(err) {
+			errs[i] = err
+			continue
 		}
 	}
-
-	return nil
+	return errs
 }
 
 // generate codes
-func genCodes(tmpls []codeTmpl) error {
-	for _, ct := range tmpls {
+func genCodes(tmpls []codeTmpl, force bool) []error {
+	errs := make([]error, len(tmpls))
+	for i, ct := range tmpls {
+		if !force {
+			if _, err := os.Stat(ct.filename); err == nil {
+				errs[i] = fmt.Errorf("文件已存在，-f强制生成")
+				continue
+			}
+		}
+
 		tmpl, err := template.New("").Parse(ct.text)
 		if err != nil {
-			return err
+			errs[i] = err
+			continue
 		}
 
 		src := new(bytes.Buffer)
 		if err := tmpl.Execute(src, ct.data); err != nil {
-			return err
+			errs[i] = err
+			continue
 		}
 
 		// format go code
@@ -117,11 +82,11 @@ func genCodes(tmpls []codeTmpl) error {
 
 		// write
 		if err := os.WriteFile(ct.filename, code, FILE_MODE); err != nil {
-			return err
+			errs[i] = err
+			continue
 		}
 	}
-
-	return nil
+	return errs
 }
 
 func modFile(filename string) (*modfile.File, error) {

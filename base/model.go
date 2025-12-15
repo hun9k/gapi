@@ -1,4 +1,4 @@
-package model
+package base
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Model 基础结构模型
+// Base 基础结构模型
 type Model struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `gorm:"created_at" json:"created_at"`

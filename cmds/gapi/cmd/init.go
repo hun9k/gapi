@@ -32,71 +32,63 @@ var initCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// curr work dir
-		wd, err := os.Getwd()
-		if err != nil {
-			slog.Warn("get workdir error", "error", err)
-			wd = "."
-		}
-
 		// mod info
 		modPath := args[0]
-		modDir := filepath.Join(wd, path.Base(modPath))
+		modBase := path.Base(modPath)
 
-		// mk module dir
-		slog.Info("创建模块目录")
-		moduleDir := []string{
-			modDir,
-		}
-		if err := genDirs(moduleDir); err != nil {
-			slog.Error("创建模块目录失败", "error", err)
+		// check if module dir exists
+		if ex, err := dirExists(modBase); err != nil || ex {
+			slog.Error("模块目录已存在", "module", modPath)
 			return
 		}
+
+		// 创建基础结构
+		dirs := []string{
+			filepath.Join(modBase),
+			filepath.Join(modBase, "models"),
+			filepath.Join(modBase, "handlers"),
+		}
+		for i, err := range genDirs(dirs) {
+			if err != nil {
+				slog.Error("创建目录失败", "dir", dirs[i], "error", err)
+				continue
+			}
+			slog.Info("创建目录成功", "dir", dirs[i])
+		}
+
+		// 生成基础代码
+		codeTmpls := []codeTmpl{
+			{"# {{.modePath}}\n", filepath.Join(modBase, "README.md"), tmplData{"modePath": modPath}},
+			{tmpls.Routers, filepath.Join(modBase, "handlers", "init_.go"), nil},
+			{tmpls.Configs, filepath.Join(modBase, "configs.yaml"), nil},
+			{tmpls.Main, filepath.Join(modBase, "main.go"), tmplData{"modPath": modPath}},
+			{"", filepath.Join(modBase, ".gapi.lock"), nil},
+		}
+		for i, err := range genCodes(codeTmpls, true) {
+			if err != nil {
+				slog.Error("生成代码失败", "filename", codeTmpls[i].filename, "error", err)
+				continue
+			}
+			slog.Info("生成代码成功", "filename", codeTmpls[i].filename)
+		}
+
 		// change dir to mod dir
-		slog.Info("切换模块目录")
-		if err := changeDir(modDir); err != nil {
+		if err := changeDir(modBase); err != nil {
 			slog.Error("切换模块目录失败", "error", err)
 			return
 		}
 
 		// mod init
-		slog.Info("初始化模块")
 		if err := modInit(modPath); err != nil {
-			slog.Error("初始化模块失败", "error", err)
+			slog.Error("mod init失败", "error", err)
 			return
 		}
+		slog.Info("mod init成功")
 
-		// make module dir
-		dirs := []string{
-			filepath.Join(modDir, "apis"),
-			filepath.Join(modDir, "routers"),
-			filepath.Join(modDir, "models"),
-			filepath.Join(modDir, "handlers"),
-		}
-
-		slog.Info("创建基本结构")
-		if err := genDirs(dirs); err != nil {
-			slog.Error("创建基本结构失败", "error", err)
+		if err := modTidy(); err != nil {
+			slog.Error("mod tidy失败", "error", err)
 			return
 		}
-
-		// generate basic codes
-		codeTmpls := []codeTmpl{
-			{"# {{.Base}}\n", filepath.Join(modDir, "README.md"), tmplData{"Base": modPath}},
-			{tmpls.Configs, filepath.Join(modDir, "configs.yaml"), nil},
-			{tmpls.RoutersPing, filepath.Join(modDir, "routers", "ping.go"), nil},
-			{tmpls.Main, filepath.Join(modDir, "main.go"), tmplData{"Path": modPath}},
-		}
-		slog.Info("生成基础代码")
-		if err := genCodes(codeTmpls); err != nil {
-			slog.Error("生成基础代码失败", "error", err)
-			return
-		}
-
-		// success and tips
-		slog.Info("模块初始化成功，可以初始化代码版本库了")
-		slog.Info("接下来，创建openapi文件，生成代码")
-
 	},
 }
 
@@ -110,7 +102,7 @@ func changeDir(dir string) error {
 	return nil
 }
 
-// mod init
+// mod init and tidy
 func modInit(path string) error {
 	// execute `go mod init`
 	cmdModInit := exec.Command("go", "mod", "init", path)
@@ -122,6 +114,15 @@ func modInit(path string) error {
 	//go mod edit -replace="github.com/hun9k/gapi"="D:/apps/gapi"
 	cmd1 := exec.Command("go", "mod", "edit", `-replace=github.com/hun9k/gapi=D:/apps/gapi`)
 	if err := cmd1.Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func modTidy() error {
+	cmdModTidy := exec.Command("go", "mod", "tidy")
+	if err := cmdModTidy.Run(); err != nil {
 		return err
 	}
 	return nil

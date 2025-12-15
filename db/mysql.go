@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func newMySQL(name string) (*gorm.DB, error) {
+func newMySQL(key string) (*gorm.DB, error) {
 	// logger 设置
 	logLevel := logger.Info
 	switch conf.Get[string]("app.mode") {
@@ -35,7 +35,7 @@ func newMySQL(name string) (*gorm.DB, error) {
 	)
 
 	// connections
-	db, err := gorm.Open(mysql.Open(conf.Get[string](fmt.Sprintf("db.%s.driver", name))), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(conf.Get[string](fmt.Sprintf("db.%s.dsn", key))), &gorm.Config{
 		// SkipDefaultTransaction:    false,
 		// DefaultTransactionTimeout: 0,
 		// DefaultContextTimeout:     0,
@@ -64,7 +64,7 @@ func newMySQL(name string) (*gorm.DB, error) {
 		// Plugins:                                  map[string]gorm.Plugin{},
 	})
 	if err != nil {
-		return nil, err
+		return &gorm.DB{}, err
 	}
 
 	return db, nil

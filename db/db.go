@@ -12,29 +12,29 @@ import (
 var dbs = map[string]*gorm.DB{}
 
 const (
-	DEFAULT_NAME = "default"
+	DEFAULT_KEY = "default"
 )
 
-func Inst(ns ...string) *gorm.DB {
-	name := DEFAULT_NAME
-	if len(ns) > 0 {
-		name = ns[0]
+func Inst(keys ...string) *gorm.DB {
+	key := DEFAULT_KEY
+	if len(keys) > 0 {
+		key = keys[0]
 	}
-	if dbs[name] == nil {
-		db, err := newDB(name)
+	if dbs[key] == nil {
+		db, err := newDB(key)
 		if err != nil {
 			log.Error("DB error", "error", err)
 		}
-		dbs[name] = db
+		dbs[key] = db
 	}
 
-	return dbs[name]
+	return dbs[key]
 }
 
-func newDB(name string) (*gorm.DB, error) {
-	switch strings.ToLower(conf.Get[string](fmt.Sprintf("db.%s.driver", name))) {
+func newDB(key string) (*gorm.DB, error) {
+	switch strings.ToLower(conf.Get[string](fmt.Sprintf("db.%s.driver", key))) {
 	case "mysql":
-		return newMySQL(name)
+		return newMySQL(key)
 	}
-	return nil, nil
+	return &gorm.DB{}, nil
 }
