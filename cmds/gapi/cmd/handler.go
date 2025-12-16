@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
+	"github.com/iancoleman/strcase"
 	"github.com/spf13/cobra"
 )
 
@@ -32,10 +33,23 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		// 检查是否指定了平台
+		if *hf_plat == "" && !*hf_splat {
+			slog.Error("请指定平台-p <platform>，或使用单平台-s")
+			return
+		}
+
+		// 读取go.mod
+		mod, err := modFile("go.mod")
+		if err != nil {
+			slog.Error("读取go.mod失败", "error", err)
+			return
+		}
+
 		for _, resource := range args {
 			// 生成目录
 			dirs := []string{
-				filepath.Join("handlers", *hf_platform, resource),
+				filepath.Join("handlers", *hf_plat, resource),
 			}
 			for i, err := range genDirs(dirs) {
 				if err != nil {
@@ -50,10 +64,11 @@ to quickly create a Cobra application.`,
 			// 生成messages
 			// 生成handlers
 			// 生成routers
+			modelName := strcase.ToCamel(resource)
 			codeTmpls := []codeTmpl{
-				{tmpls.ResourceMessages, filepath.Join("handlers", *hf_platform, resource, "messages.go"), tmplData{"resource": resource}},
-				{tmpls.ResourceHandlers, filepath.Join("handlers", *hf_platform, resource, "handlers.go"), tmplData{"resource": resource}},
-				{tmpls.ResourceRouters, filepath.Join("handlers", *hf_platform, resource, "routers.go"), tmplData{"resource": resource}},
+				{tmpls.ResourceMessages, filepath.Join("handlers", *hf_plat, resource, "messages.go"), tmplData{"resource": resource}},
+				{tmpls.ResourceHandlers, filepath.Join("handlers", *hf_plat, resource, "handlers.go"), tmplData{"resource": resource, "modelName": modelName, "modPath": mod.Module.Mod.Path}},
+				{tmpls.ResourceRouters, filepath.Join("handlers", *hf_plat, resource, "routers.go"), tmplData{"resource": resource}},
 			}
 			for i, err := range genCodes(codeTmpls, *hf_force) {
 				if err != nil {
@@ -77,8 +92,9 @@ to quickly create a Cobra application.`,
 // }
 
 var (
-	hf_platform *string
-	hf_force    *bool
+	hf_plat  *string
+	hf_splat *bool
+	hf_force *bool
 )
 
 func init() {
@@ -94,5 +110,6 @@ func init() {
 	// is called directly, e.g.:
 	// genhandlerCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	hf_force = handlerCmd.Flags().BoolP("force", "f", false, "强制生成")
-	hf_platform = handlerCmd.Flags().StringP("platform", "p", "", "选择平台")
+	hf_splat = handlerCmd.Flags().BoolP("splat", "s", false, "单平台")
+	hf_plat = handlerCmd.Flags().StringP("platform", "p", "", "选择平台")
 }

@@ -3,7 +3,6 @@ package dao
 import (
 	"context"
 
-	"github.com/hun9k/gapi/base"
 	"github.com/hun9k/gapi/db"
 )
 
@@ -35,13 +34,8 @@ func (d *dao) Ctx(ctx context.Context) *dao {
 	d.ctx = ctx
 	return d
 }
-func (d *dao) M(m any) *dao {
-	d.m = m
-	return d
-}
 
 func (d *dao) Reset() *dao {
 	d.ctx = context.Background()
-	d.m = &base.Model{}
 	return d
 }

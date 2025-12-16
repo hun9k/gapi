@@ -5,14 +5,73 @@ var ResourceMessages = `package {{.resource}}
 
 var ResourceHandlers = `package {{.resource}}
 
-import "github.com/gin-gonic/gin"
+import (
+	"{{.modPath}}/models"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hun9k/gapi/base"
+	"github.com/hun9k/gapi/dao"
+	"github.com/hun9k/gapi/log"
+)
 
 func get(ctx *gin.Context) {
+	// bind request
+	req := base.GetReq{}
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		log.Info("bind request error", "path", ctx.Request.URL.Path, "error", err)
+		ctx.JSON(http.StatusBadRequest, base.Resp{
+			Code:    1,
+			Message: err.Error(),
+		})
+		return
+	}
 
+	// get row
+	row, err := dao.Select[models.{{.modelName}}](dao.MkOpt(), req.ID)
+	if err != nil {
+		log.Info("get row error", "path", ctx.Request.URL.Path, "error", err)
+		ctx.JSON(http.StatusNotFound, base.Resp{
+			Code:    2,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// response
+	ctx.JSON(http.StatusOK, base.Resp{
+		Code: 0,
+		Data: row,
+	})
 }
 
 func getList(ctx *gin.Context) {
+	// bind request
+	req := base.GetListReq{}
+	if err := ctx.ShouldBind(&req); err != nil {
+		log.Info("bind request error", "path", ctx.Request.URL.Path, "error", err)
+		ctx.JSON(http.StatusBadRequest, base.Resp{
+			Code:    1,
+			Message: err.Error(),
+		})
+		return
+	}
 
+	// get list
+	list, err := dao.SelectList[models.{{.modelName}}](dao.MkOpt(), req.Sort, req.Page)
+	if err != nil {
+		log.Info("get list error", "path", ctx.Request.URL.Path, "error", err)
+		ctx.JSON(http.StatusNotFound, base.Resp{
+			Code:    2,
+			Message: err.Error(),
+		})
+	}
+
+	// response
+	ctx.JSON(http.StatusOK, base.Resp{
+		Code: 0,
+		Data: list,
+	})
 }
 
 func create(ctx *gin.Context) {
@@ -49,15 +108,11 @@ import gin "github.com/gin-gonic/gin"
 
 func SetupRouter(g *gin.RouterGroup) {
 	group := g.Group("{{.resource}}")
-	group.GET(":id", get)
-	group.GET("", getList)
-	group.POST("", create)
-	group.PUT(":id", update)
-	group.PUT("", updateList)
-	group.DELETE(":id", delete)
-	group.DELETE("", deleteList)
-	group.PUT(":id/restore", restore)
-	group.POST("restore", restoreList)
+	group.GET("", get)             // 查
+	group.POST("", post)           // 增
+	group.PUT("", put)             // 改
+	group.DELETE("", delete)       // 删
+	group.POST("restore", restore) // 恢
 }
 
 `
@@ -164,7 +219,7 @@ func init() {
 
 func routers() {
 	// // version group
-	// v1 := api.Router().Group("v1") // .Use(middleware.AuthMiddleware())
+	// v1 := api.Router().Group("") // .Use(middleware.AuthMiddleware())
 	// {
 	// 	// platform group
 	// 	admin := v1.Group("admin") // .Use(middleware.AuthMiddleware())
