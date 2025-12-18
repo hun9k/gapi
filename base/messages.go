@@ -4,8 +4,8 @@ import "github.com/hun9k/gapi/dao"
 
 type GQuery struct {
 	*dao.Filter `form:"filter" binding:""`
-	*dao.Order  `form:"sort" binding:""`
-	*dao.Pager  `form:"page" binding:""`
+	*dao.Order  `form:"order" binding:""`
+	*dao.Pager  `form:"pager" binding:""`
 }
 
 type Resp struct {

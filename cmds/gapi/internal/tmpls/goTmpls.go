@@ -7,112 +7,47 @@ var ResourceHandlers = `package {{.resource}}
 
 import (
 	"{{.modPath}}/models"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hun9k/gapi/base"
-	"github.com/hun9k/gapi/dao"
-	"github.com/hun9k/gapi/log"
 )
 
 func get(ctx *gin.Context) {
-	// bind request
-	req := base.GetReq{}
-	if err := ctx.ShouldBindUri(&req); err != nil {
-		log.Info("bind request error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusBadRequest, base.Resp{
-			Code:    1,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	// get row
-	row, err := dao.Select[models.{{.modelName}}](dao.MkOpt(), req.ID)
-	if err != nil {
-		log.Info("get row error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusNotFound, base.Resp{
-			Code:    2,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	// response
-	ctx.JSON(http.StatusOK, base.Resp{
-		Code: 0,
-		Data: row,
-	})
+	// base get list
+	base.Get[{{.modelName}}](ctx)
 }
 
-func getList(ctx *gin.Context) {
-	// bind request
-	req := base.GetListReq{}
-	if err := ctx.ShouldBind(&req); err != nil {
-		log.Info("bind request error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusBadRequest, base.Resp{
-			Code:    1,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	// get list
-	list, err := dao.SelectList[models.{{.modelName}}](dao.MkOpt(), req.Sort, req.Page)
-	if err != nil {
-		log.Info("get list error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusNotFound, base.Resp{
-			Code:    2,
-			Message: err.Error(),
-		})
-	}
-
-	// response
-	ctx.JSON(http.StatusOK, base.Resp{
-		Code: 0,
-		Data: list,
-	})
+func post(ctx *gin.Context) {
+	base.Post[{{.modelName}}](ctx)
 }
 
-func create(ctx *gin.Context) {
-
-}
-
-func update(ctx *gin.Context) {
-
-}
-func updateList(ctx *gin.Context) {
-
+func put(ctx *gin.Context) {
+	base.Put[{{.modelName}}](ctx)
 }
 
 func delete(ctx *gin.Context) {
-
-}
-func deleteList(ctx *gin.Context) {
-
+	base.Delete[{{.modelName}}](ctx)
 }
 
 func restore(ctx *gin.Context) {
-
-}
-
-func restoreList(ctx *gin.Context) {
-
+	base.Restore[{{.modelName}}](ctx)
 }
 
 `
 
 var ResourceRouters = `package {{.resource}}
 
-import gin "github.com/gin-gonic/gin"
+import (
+	gin "github.com/gin-gonic/gin"
+)
 
 func SetupRouter(g *gin.RouterGroup) {
 	group := g.Group("{{.resource}}")
-	group.GET("", get)             // 查
-	group.POST("", post)           // 增
-	group.PUT("", put)             // 改
-	group.DELETE("", delete)       // 删
-	group.POST("restore", restore) // 恢
+	group.GET("", get)            // 查
+	group.POST("", post)          // 增
+	group.PUT("", put)            // 改
+	group.DELETE("", delete)      // 删
+	group.PUT("restore", restore) // 恢
 }
 
 `
@@ -188,19 +123,22 @@ var ModelsInit = `package models
 
 import (
 	"github.com/hun9k/gapi/conf"
+	"github.com/hun9k/gapi/dao"
 	"github.com/hun9k/gapi/db"
 )
 
 func init() {
-	// migrate db
-	migrate()
-}
+	// models
+	models := []any{
+		{{.modelList}},
+	}
 
-func migrate() {
+	// migrate db
 	if conf.Get[string]("app.mode") == conf.APP_MODE_DEV {
-		db.Inst().AutoMigrate({{.modelList}})
+		dao.ModelMigrate(db.Inst(), models...)
 	}
 }
+
 `
 
 var Routers = `package handlers

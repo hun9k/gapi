@@ -64,7 +64,7 @@ to quickly create a Cobra application.`,
 			// 生成messages
 			// 生成handlers
 			// 生成routers
-			modelName := strcase.ToCamel(resource)
+			modelName := "models." + strcase.ToCamel(resource)
 			codeTmpls := []codeTmpl{
 				{tmpls.ResourceMessages, filepath.Join("handlers", *hf_plat, resource, "messages.go"), tmplData{"resource": resource}},
 				{tmpls.ResourceHandlers, filepath.Join("handlers", *hf_plat, resource, "handlers.go"), tmplData{"resource": resource, "modelName": modelName, "modPath": mod.Module.Mod.Path}},

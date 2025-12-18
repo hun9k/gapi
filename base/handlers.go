@@ -6,12 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hun9k/gapi/dao"
 	"github.com/hun9k/gapi/log"
+	"gorm.io/gorm"
 )
 
 func Get[M any](ctx *gin.Context) {
 	// bind request
 	req := GQuery{}
-	if err := ctx.ShouldBindQuery(&req); err != nil {
+	if err := ctx.ShouldBind(&req); err != nil {
 		log.Info("get bind query error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
 			Error:   1,
@@ -20,7 +21,45 @@ func Get[M any](ctx *gin.Context) {
 		return
 	}
 
+	// id search
+	if req.Filter != nil && req.Filter.ID() != nil { // id search
+		list, err := dao.Select[M](
+			dao.MkOpt(), req.Filter,
+		)
+		if err != nil {
+			log.Info("select error", "path", ctx.Request.URL.Path, "error", err)
+			ctx.JSON(http.StatusInternalServerError, Resp{
+				Error:   2,
+				Message: err.Error(),
+			})
+		}
+		if len(list) == 1 { // id exists
+			ctx.JSON(http.StatusOK, Resp{
+				Error: 0,
+				Data:  list[0],
+			})
+			return
+		} else { // id not exists
+			err := gorm.ErrRecordNotFound
+			log.Info("selecct error", "path", ctx.Request.URL.Path, "error", err)
+			ctx.JSON(http.StatusNotFound, Resp{
+				Error:   2,
+				Message: err.Error(),
+			})
+			return
+		}
+	}
+
 	// get list
+	if req.Filter == nil {
+		req.Filter = dao.EmptyFilter()
+	}
+	if req.Pager == nil {
+		req.Pager = dao.NoLimitPager()
+	}
+	if req.Order == nil {
+		req.Order = dao.DefaultOrder()
+	}
 	list, err := dao.Select[M](
 		dao.MkOpt(),
 		req.Filter, req.Order, req.Pager,
@@ -31,8 +70,10 @@ func Get[M any](ctx *gin.Context) {
 			Error:   2,
 			Message: err.Error(),
 		})
-
+		return
 	}
+
+	// list search
 	total, err := dao.Count[M](
 		dao.MkOpt(), "*",
 		req.Filter,
@@ -43,18 +84,18 @@ func Get[M any](ctx *gin.Context) {
 			Error:   2,
 			Message: err.Error(),
 		})
-
+		return
 	}
 
 	// response
 	ctx.JSON(http.StatusOK, Resp{
 		Error: 0,
 		Data: ListData{
-			List:  list,
-			Total: total,
-			// Pager:  *req.Pager,
-			// Filter: *req.Filter,
-			// Order:  *req.Order,
+			List:   list,
+			Total:  total,
+			Order:  *req.Order,
+			Pager:  *req.Pager,
+			Filter: *req.Filter,
 		},
 	})
 }
@@ -172,7 +213,7 @@ func Restore[M any](ctx *gin.Context) {
 	}
 
 	// restore rows
-	num, err := dao.Restore[M](dao.MkOpt(), req.Filter, req.Order, req.Pager)
+	num, err := dao.Restore[M](dao.MkOpt(), req.Filter)
 	if err != nil {
 		log.Info("restore error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusInternalServerError, Resp{
