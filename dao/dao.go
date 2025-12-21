@@ -4,22 +4,20 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"slices"
-	"sync"
+	"strings"
 
-	"github.com/hun9k/gapi/cache"
 	"github.com/hun9k/gapi/db"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"gorm.io/gorm/schema"
 )
 
 // 执行选项
 type Option struct {
 	db       *gorm.DB
 	ctx      context.Context
-	unscoped bool // 是否忽略软删除
+	unscoped Unscoped // 是否忽略软删除
 }
+type Unscoped bool
 
 func MkOpt(options ...any) Option {
 	op := Option{
@@ -34,10 +32,9 @@ func MkOpt(options ...any) Option {
 			op.db = v
 		case context.Context:
 			op.ctx = v
-		case bool:
+		case Unscoped:
 			op.unscoped = v
 		}
-
 	}
 	return op
 }
@@ -67,6 +64,36 @@ func BuildClauses(conds ...any) []clause.Expression {
 	return clauses
 }
 
+type IDer interface {
+	Where() clause.Expression
+}
+
+type ID uint
+
+func (id ID) Where() clause.Expression {
+	return clause.Expr{
+		SQL:  "`id` = ?",
+		Vars: []any{id},
+	}
+}
+
+type IDser interface {
+	Where() clause.Expression
+}
+
+type IDs []any
+
+func (ids IDs) Where() clause.Expression {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	return clause.Expr{
+		SQL:  "`id` IN (?)",
+		Vars: []any{ids},
+	}
+}
+
 type Selector interface {
 	Select() clause.Expression
 }
@@ -85,7 +112,11 @@ type Limiter interface {
 
 type Cols []string
 
-func (s Cols) Select() clause.Select {
+func (s Cols) Select() clause.Expression {
+	if len(s) == 0 {
+		return nil
+	}
+
 	sel := clause.Select{
 		Columns: []clause.Column{},
 	}
@@ -99,26 +130,14 @@ func (s Cols) Select() clause.Select {
 
 type Filter map[string]any
 
-func (f Filter) ID() any {
-	if id, ok := f["_id"]; ok {
-		return id
-	}
-	return nil
-}
-
 func (f Filter) Where() clause.Expression {
+	if len(f) == 0 {
+		return nil
+	}
+
 	exprs := []clause.Expression{}
 	keyword, kok := f["_keyword"]
 	search, sok := f["_search"]
-	// do id search
-	if id := f.ID(); id != nil {
-		exprs = append(exprs, clause.Expr{
-			SQL:  "`id` = ?",
-			Vars: []any{id},
-		})
-		delete(f, "_id")
-		goto end
-	}
 
 	// do keyword search
 	if kok && sok && search != "" && keyword != "" {
@@ -169,7 +188,6 @@ func (f Filter) Where() clause.Expression {
 		}
 	}
 
-end:
 	if len(exprs) == 0 {
 		return nil
 	}
@@ -178,136 +196,111 @@ end:
 	}
 }
 
-func EmptyFilter() *Filter {
-	return &Filter{}
-}
-
-// field, asc|desc
-type Order []struct {
-	Field string `json:"field"`
-	Desc  bool   `json:"desc"`
-}
-
-func (s Order) OrderBy() clause.Expression {
-	var s1 = slices.Clone(s)
-	columns := []clause.OrderByColumn{}
-	for i, v := range s1 {
-		if v.Field == "" {
-			s = slices.Delete(s, i, i+1)
-			continue
-		}
-		columns = append(columns, clause.OrderByColumn{
-			Column: clause.Column{
-				Name: v.Field,
-			},
-			Desc: v.Desc,
-		})
+func CheckFilter(f Filter) Filter {
+	if len(f) == 0 {
+		return Filter{}
 	}
-	if len(columns) == 0 {
+	return f
+}
+
+func FilterIDs(f Filter) []any {
+	if f == nil {
 		return nil
 	}
 
-	fmt.Println(s, s1)
+	v, exists := f["id"]
+	if !exists {
+		return nil
+	}
+
+	return v.([]any)
+}
+
+func (o Option) DB() *gorm.DB {
+	if o.unscoped {
+		return o.db.Unscoped()
+	}
+	return o.db
+}
+
+func (o Option) Ctx() context.Context {
+	return o.ctx
+}
+
+func (o Option) Unscoped() bool {
+	return o.Unscoped()
+}
+
+// [[field, ASC|DESC], ...]
+type Sorts []Sort
+type Sort []string
+
+func (s Sorts) OrderBy() clause.Expression {
+	if len(s) == 0 {
+		return nil
+	}
+
+	var columns []clause.OrderByColumn
+
+	for _, v := range s {
+		columns = append(columns, clause.OrderByColumn{
+			Column: clause.Column{
+				Name: v[0],
+			},
+			Desc: strings.ToUpper(v[1]) == "DESC",
+		})
+	}
+
 	return clause.OrderBy{
 		Columns: columns,
 	}
 }
 
-func DefaultOrder() *Order {
-	return &Order{
-		{"id", true},
+func CheckSort(s Sorts) Sorts {
+	if len(s) == 0 {
+		return Sorts{}
 	}
+
+	var s1 Sorts
+	for _, v := range s {
+		if len(v) == 0 || v[0] == "" {
+			continue
+		}
+		if v[1] == "" {
+			v[1] = "ASC"
+		}
+		s1 = append(s1, v)
+	}
+
+	return s1
 }
 
-type Pager map[string]int
+// start - end
+type Range []int
 
-const (
-	PAGE_KEY = "page"
-	SIZE_KEY = "size"
-	SIZE_DFT = 12
-	SIZE_MAX = 100
-)
-
-func (p Pager) Limit() clause.Expression {
-	p.Clean()
-
-	_, pOk := p[PAGE_KEY]
-	size, sOk := p[SIZE_KEY]
-	if !pOk || p[PAGE_KEY] <= 0 {
-		p[PAGE_KEY] = 1
-	}
-	var limit *int
-	if !sOk {
-		limit = nil
-	} else {
-		if size <= 0 {
-			size = SIZE_DFT
-		} else if size > 100 {
-			size = SIZE_MAX
-		}
-		p[SIZE_KEY] = size
-		limit = &size
+func (r Range) Limit() clause.Expression {
+	if len(r) != 2 || r[0] < 0 || r[1] < 0 || r[0] > r[1] {
+		return nil
 	}
 
+	l := r[1] - r[0] + 1
 	return clause.Limit{
-		Limit:  limit,
-		Offset: (p[PAGE_KEY] - 1) * p[SIZE_KEY],
-	}
-}
-func (p Pager) Clean() {
-	allKey := map[string]struct{}{PAGE_KEY: {}, SIZE_KEY: {}}
-	for k := range p {
-		if _, exists := allKey[k]; !exists {
-			delete(p, k)
-		}
+		Offset: r[0],
+		Limit:  &l,
 	}
 }
 
-func NoLimitPager() *Pager {
-	return &Pager{
-		PAGE_KEY: 1,
+func CheckRange(r Range, total int64) Range {
+	if r == nil || len(r) != 2 {
+		return nil
 	}
-}
-
-// 缓存字段
-func CacheFields(cacher cache.Cacher, models ...any) {
-	for _, model := range models {
-		modelName, fields, err := ModelFields(model)
-		if err != nil {
-			continue
-		}
-		cacher.Set(modelName+":fields", fields, cache.NoExpiration)
+	if r[1] > int(total)-1 {
+		r[1] = int(total) - 1
 	}
-}
-
-// ModelFields 解析模型的表字段列表
-func ModelFields(model any) (string, []string, error) {
-	// 解析模型为 schema
-	sch, err := schema.Parse(model, &sync.Map{}, schema.NamingStrategy{})
-	if err != nil {
-		return "", nil, err
+	if r[0] < 0 || r[0] > r[1] {
+		return nil
 	}
-
-	// 提取列名（数据库表字段名）
-	var fields []string
-	for _, field := range sch.Fields {
-		// 跳过关联字段
-		if _, exists := sch.Relationships.Relations[field.Name]; exists {
-			continue
-		}
-		fields = append(fields, field.DBName) // DBName 是数据库列名，Name 是结构体字段名
-	}
-	return sch.Name, fields, nil
-}
-
-func ModelName(model any) (string, error) {
-	// 解析模型为 schema
-	sch, err := schema.Parse(model, &sync.Map{}, schema.NamingStrategy{})
-	if err != nil {
-		return "", err
-	}
-
-	return sch.Name, nil
+	return r
 }
 
 // 模型迁移

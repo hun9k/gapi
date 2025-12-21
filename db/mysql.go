@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func newMySQL(key string) (*gorm.DB, error) {
+func NewMySQL(key string) (*gorm.DB, error) {
 	// logger 设置
 	logLevel := logger.Info
 	switch conf.Get[string]("app.mode") {
@@ -64,7 +64,7 @@ func newMySQL(key string) (*gorm.DB, error) {
 		// Plugins:                                  map[string]gorm.Plugin{},
 	})
 	if err != nil {
-		return &gorm.DB{}, err
+		return nil, err
 	}
 
 	return db, nil

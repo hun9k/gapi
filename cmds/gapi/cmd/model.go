@@ -77,7 +77,7 @@ model user, post
 		codeTmpls = []codeTmpl{
 			{
 				tmpls.ModelsInit,
-				filepath.Join(MODEL_DIR, "init_.go"),
+				filepath.Join(MODEL_DIR, "init.go"),
 				tmplData{
 					"modelList": strings.Join(modelList, ", "),
 				},
@@ -119,7 +119,7 @@ func getModelPtrs(dir string) ([]string, error) {
 			continue
 		}
 		// 跳过以 "_init" 开头的文件
-		if strings.HasPrefix(filename, "init_") {
+		if strings.HasPrefix(filename, "init") {
 			continue
 		}
 

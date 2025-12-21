@@ -12,25 +12,32 @@ import (
 	"github.com/hun9k/gapi/base"
 )
 
-func get(ctx *gin.Context) {
-	// base get list
-	base.Get[{{.modelName}}](ctx)
-}
-
-func post(ctx *gin.Context) {
-	base.Post[{{.modelName}}](ctx)
-}
-
-func put(ctx *gin.Context) {
-	base.Put[{{.modelName}}](ctx)
+func create(ctx *gin.Context) {
+	base.Create[{{.modelName}}](ctx)
 }
 
 func delete(ctx *gin.Context) {
 	base.Delete[{{.modelName}}](ctx)
 }
 
-func restore(ctx *gin.Context) {
-	base.Restore[{{.modelName}}](ctx)
+func deleteMany(ctx *gin.Context) {
+	base.DeleteMany[{{.modelName}}](ctx)
+}
+
+func update(ctx *gin.Context) {
+	base.Update[{{.modelName}}](ctx)
+}
+
+func updateMany(ctx *gin.Context) {
+	base.UpdateMany[{{.modelName}}](ctx)
+}
+
+func getOne(ctx *gin.Context) {
+	base.GetOne[{{.modelName}}](ctx)
+}
+
+func get(ctx *gin.Context) {
+	base.Get[{{.modelName}}](ctx)
 }
 
 `
@@ -43,11 +50,15 @@ import (
 
 func SetupRouter(g *gin.RouterGroup) {
 	group := g.Group("{{.resource}}")
-	group.GET("", get)            // 查
-	group.POST("", post)          // 增
-	group.PUT("", put)            // 改
-	group.DELETE("", delete)      // 删
-	group.PUT("restore", restore) // 恢
+	group.OPTIONS("", nil)       // OPTIONS
+	group.OPTIONS(":id", nil)    // OPTIONS
+	group.POST("", create)       // 增
+	group.DELETE(":id", delete)  // 删单id
+	group.DELETE("", deleteMany) // 删多id
+	group.PUT(":id", update)     // 改单id
+	group.PUT("", updateMany)    // 改多id
+	group.GET(":id", getOne)     // 查单id
+	group.GET("", get)           // 查多id,或过滤条件
 }
 
 `
@@ -141,31 +152,36 @@ func init() {
 
 `
 
-var Routers = `package handlers
-
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-	"github.com/hun9k/gapi/services/api"
-)
+var HandlersInit = `package handlers
 
 func init() {
 	// routers
 	routers()
 }
 
+`
+
+var HandlersRouters = `package handlers
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hun9k/gapi/base"
+	"github.com/hun9k/gapi/services/api"
+)
+
 func routers() {
-	// // version group
-	// v1 := api.Router().Group("") // .Use(middleware.AuthMiddleware())
-	// {
-	// 	// platform group
-	// 	admin := v1.Group("admin") // .Use(middleware.AuthMiddleware())
-	// 	{
-	// 		// setup resource routers
-	// 		contents.SetupRouter(admin)
-	// 	}
-	// }
+	// version group
+	v1 := api.Router().Group("")
+	{
+		// platform group
+		platform := v1.Group("platform")
+		platform.Use(base.CorsDefault())
+		{
+			// setup resource routers
+		}
+	}
 
 	// ping
 	api.Router().GET("ping", func(ctx *gin.Context) {

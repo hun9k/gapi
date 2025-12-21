@@ -59,7 +59,8 @@ var initCmd = &cobra.Command{
 		// 生成基础代码
 		codeTmpls := []codeTmpl{
 			{"# {{.modePath}}\n", filepath.Join(modBase, "README.md"), tmplData{"modePath": modPath}},
-			{tmpls.Routers, filepath.Join(modBase, "handlers", "init_.go"), nil},
+			{tmpls.HandlersRouters, filepath.Join(modBase, "handlers", "routers.go"), nil},
+			{tmpls.HandlersInit, filepath.Join(modBase, "handlers", "init.go"), nil},
 			{tmpls.Configs, filepath.Join(modBase, "configs.yaml"), nil},
 			{tmpls.Main, filepath.Join(modBase, "main.go"), tmplData{"modPath": modPath}},
 			{"", filepath.Join(modBase, ".gapi.lock"), nil},
