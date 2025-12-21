@@ -76,7 +76,11 @@ func genCodes(tmpls []codeTmpl, force bool) []error {
 		// format go code
 		code := src.Bytes()
 		if filepath.Ext(ct.filename) == GO_EXT {
-			c, _ := format.Source(src.Bytes())
+			c, err := format.Source(src.Bytes())
+			if err != nil {
+				errs[i] = err
+				continue
+			}
 			code = c
 		}
 

@@ -2,13 +2,12 @@ package base
 
 import "github.com/hun9k/gapi/dao"
 
-type GID struct {
+type IDUri struct {
 	ID uint `uri:"id" binding:"required"`
 }
 
-type GIDs struct {
-	IDs    []uint  `form:"id" binding:"required"`
-	Option *string `form:"option" binding:""`
+type IDsQuery struct {
+	IDs []uint `form:"id" binding:"required"`
 }
 
 type ListQuery struct {
@@ -17,7 +16,7 @@ type ListQuery struct {
 	Range  *string `form:"range" binding:""`
 }
 
-type GQuery struct {
+type Cond struct {
 	dao.Filter `form:"filter" binding:""`
 	dao.Sorts  `form:"order" binding:""`
 	dao.Range  `form:"range" binding:""`

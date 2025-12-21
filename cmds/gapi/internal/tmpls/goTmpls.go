@@ -1,15 +1,37 @@
 package tmpls
 
 var ResourceMessages = `package {{.resource}}
+
+import (
+	"{{.modPath}}/models"
+	{{if .iTime}}"time"{{end}}
+)
+
+type putBody struct {
+{{range .fields}}
+	{{.Name}} {{if .IsNonRef}}*{{end}}{{.Type}} {{.Tag}}{{end}}
+}
+
+func bodyToModel(body putBody) (model models.{{.modelName}}, cols []string) {
+{{range .fields}}if body.{{.Name}} != nil {
+		cols = append(cols, "{{.Col}}")
+		model.{{.Name}} = {{if .IsNonRef}}*{{end}}body.{{.Name}}
+	}
+{{end}}
+	return model, cols
+}
+
 `
 
 var ResourceHandlers = `package {{.resource}}
 
 import (
 	"{{.modPath}}/models"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hun9k/gapi/base"
+	"github.com/hun9k/gapi/log"
 )
 
 func create(ctx *gin.Context) {
@@ -25,11 +47,31 @@ func deleteMany(ctx *gin.Context) {
 }
 
 func update(ctx *gin.Context) {
-	base.Update[{{.modelName}}](ctx)
+	// bind body
+	body := putBody{}
+	if err := ctx.ShouldBind(&body); err != nil {
+		log.Info("bind body error", "path", ctx.Request.URL.Path, "error", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	model, cols := bodyToModel(body)
+	base.Update(ctx, model, cols)
 }
 
 func updateMany(ctx *gin.Context) {
-	base.UpdateMany[{{.modelName}}](ctx)
+	// bind body
+	body := putBody{}
+	if err := ctx.ShouldBind(&body); err != nil {
+		log.Info("bind body error", "path", ctx.Request.URL.Path, "error", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	model, cols := bodyToModel(body)
+	base.UpdateMany(ctx, model, cols)
 }
 
 func getOne(ctx *gin.Context) {
@@ -172,8 +214,8 @@ import (
 )
 
 func routers() {
-	// version group
-	v1 := api.Router().Group("")
+	// group
+	v1 := api.Router().Group("") // .Group("v1")
 	{
 		// platform group
 		platform := v1.Group("platform")

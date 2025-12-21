@@ -3,6 +3,7 @@ module github.com/hun9k/gapi
 go 1.25.0
 
 require (
+	github.com/dave/jennifer v1.7.1
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible

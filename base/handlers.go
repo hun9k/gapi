@@ -40,7 +40,7 @@ func Create[M any](ctx *gin.Context) {
 // 删除单条记录，利用ID
 func Delete[M any](ctx *gin.Context) {
 	// bind uri
-	req := GID{}
+	req := IDUri{}
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		log.Info("bind ID error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -72,7 +72,7 @@ func Delete[M any](ctx *gin.Context) {
 // 删除列表，利用ID列表
 func DeleteMany[M any](ctx *gin.Context) {
 	// bind request
-	req := GQuery{}
+	req := Cond{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		log.Info("bind query error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -102,9 +102,9 @@ func DeleteMany[M any](ctx *gin.Context) {
 }
 
 // 更新单条记录，利用ID
-func Update[M any](ctx *gin.Context) {
+func Update[M any](ctx *gin.Context, model M, cols []string) {
 	// bind ID
-	req := GID{}
+	req := IDUri{}
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		log.Info("bind uri error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -112,20 +112,8 @@ func Update[M any](ctx *gin.Context) {
 		})
 	}
 
-	// bind body
-	item := new(M)
-	if err := ctx.ShouldBind(&item); err != nil {
-		log.Info("bind body error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusBadRequest, Resp{
-			Error:   1,
-			Message: err.Error(),
-		})
-		return
-	}
-
 	// update row
-
-	if _, err := dao.UpdateRow(dao.MkOpt(), item, req.ID, nil); err != nil {
+	if _, err := dao.UpdateRow(dao.MkOpt(), model, req.ID, cols); err != nil {
 		log.Info("update error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Error:   2,
@@ -135,13 +123,13 @@ func Update[M any](ctx *gin.Context) {
 	}
 
 	// response
-	ctx.JSON(http.StatusOK, item)
+	ctx.JSON(http.StatusOK, model)
 }
 
 // 更新多条记录，利用ID列表
-func UpdateMany[M any](ctx *gin.Context) {
+func UpdateMany[M any](ctx *gin.Context, model M, cols []string) {
 	// bind query
-	req := GQuery{}
+	req := Cond{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		log.Info("bind query error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -151,20 +139,9 @@ func UpdateMany[M any](ctx *gin.Context) {
 		return
 	}
 
-	// bind body
-	item := new(M)
-	if err := ctx.ShouldBind(&item); err != nil {
-		log.Info("bind body error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusBadRequest, Resp{
-			Error:   1,
-			Message: err.Error(),
-		})
-		return
-	}
-
 	// update rows
 	ids := dao.FilterIDs(req.Filter)
-	if _, err := dao.UpdateRows(dao.MkOpt(), item, ids, nil); err != nil {
+	if _, err := dao.UpdateRows(dao.MkOpt(), model, ids, cols); err != nil {
 		log.Info("update error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Error:   2,
@@ -183,7 +160,7 @@ func UpdateMany[M any](ctx *gin.Context) {
 
 func Restore[M any](ctx *gin.Context) {
 	// bind query
-	req := GQuery{}
+	req := Cond{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		log.Info("bind query error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -214,7 +191,7 @@ func Restore[M any](ctx *gin.Context) {
 // 获取单条记录，利用ID
 func GetOne[M any](ctx *gin.Context) {
 	// bind uri
-	req := GID{}
+	req := IDUri{}
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		log.Info("bind ID error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -253,7 +230,7 @@ func Get[M any](ctx *gin.Context) {
 // 获取列表，利用ID列表，无翻页，ID倒序
 func GetMany[M any](ctx *gin.Context) {
 	// bind request
-	req := GQuery{}
+	req := Cond{}
 	if err := ctx.ShouldBind(&req); err != nil {
 		log.Info("bind query error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusBadRequest, Resp{
@@ -279,7 +256,7 @@ func GetMany[M any](ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, list)
 }
 
-func ShouldBindListQuery(ctx *gin.Context) (*GQuery, error) {
+func ShouldBindListQuery(ctx *gin.Context) (*Cond, error) {
 	req := ListQuery{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		return nil, err
@@ -298,7 +275,7 @@ func ShouldBindListQuery(ctx *gin.Context) (*GQuery, error) {
 		return nil, err
 	}
 
-	return &GQuery{
+	return &Cond{
 		Filter: filter,
 		Sorts:  dao.Sorts{sort},
 		Range:  rangee,
