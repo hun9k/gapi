@@ -58,12 +58,32 @@ var initCmd = &cobra.Command{
 
 		// 生成基础代码
 		codeTmpls := []codeTmpl{
-			{"# {{.modePath}}\n", filepath.Join(modBase, "README.md"), tmplData{"modePath": modPath}},
-			{tmpls.HandlersRouters, filepath.Join(modBase, "handlers", "routers.go"), nil},
-			{tmpls.HandlersInit, filepath.Join(modBase, "handlers", "init.go"), nil},
-			{tmpls.Configs, filepath.Join(modBase, "configs.yaml"), nil},
-			{tmpls.Main, filepath.Join(modBase, "main.go"), tmplData{"modPath": modPath}},
-			{"", filepath.Join(modBase, ".gapi.lock"), nil},
+			{
+				text:     "# {{.modePath}}\n",
+				filename: filepath.Join(modBase, "README.md"),
+				data:     tmplData{"modePath": modPath},
+			},
+			{
+				text:     tmpls.PlatformRouters,
+				filename: filepath.Join(modBase, "handlers", "routers.go"),
+			},
+			{
+				text:     tmpls.HandlersInit,
+				filename: filepath.Join(modBase, "handlers", "init.go"),
+			},
+			{
+				text:     tmpls.Configs,
+				filename: filepath.Join(modBase, "configs.yaml"),
+			},
+			{
+				text:     tmpls.Main,
+				filename: filepath.Join(modBase, "main.go"),
+				data:     tmplData{"modPath": modPath},
+			},
+			{
+				text:     "",
+				filename: filepath.Join(modBase, ".gapi.lock"),
+			},
 		}
 		for i, err := range genCodes(codeTmpls, true) {
 			if err != nil {

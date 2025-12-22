@@ -20,6 +20,7 @@ const (
 type codeTmpl struct {
 	text, filename string
 	data           any
+	isKeep         bool
 }
 
 const (
@@ -54,11 +55,10 @@ func genDirs(dirs []string) []error {
 func genCodes(tmpls []codeTmpl, force bool) []error {
 	errs := make([]error, len(tmpls))
 	for i, ct := range tmpls {
-		if !force {
-			if _, err := os.Stat(ct.filename); err == nil {
-				errs[i] = fmt.Errorf("文件已存在，-f强制生成")
-				continue
-			}
+		// 文件存在 同时 保留或不强制覆盖
+		if _, err := os.Stat(ct.filename); err == nil && (ct.isKeep || !force) {
+			errs[i] = fmt.Errorf("跳过重新生成")
+			continue
 		}
 
 		tmpl, err := template.New("").Parse(ct.text)

@@ -49,9 +49,9 @@ model user, post
 		codeTmpls := make([]codeTmpl, len(args))
 		for i, resource := range args {
 			codeTmpls[i] = codeTmpl{
-				tmpls.ResourceModel,
-				filepath.Join(MODEL_DIR, resource+GO_EXT),
-				tmplData{
+				text:     tmpls.ResourceModel,
+				filename: filepath.Join(MODEL_DIR, resource+GO_EXT),
+				data: tmplData{
 					"package":  MODEL_DIR,
 					"model":    strcase.ToCamel(resource),
 					"resource": resource,
@@ -69,16 +69,16 @@ model user, post
 		}
 
 		// generate migrate init
-		modelList, err := getModelPtrs(MODEL_DIR)
+		modelList, err := getModels(MODEL_DIR)
 		if err != nil {
 			slog.Error("获取模型名列表失败", "error", err)
 			return
 		}
 		codeTmpls = []codeTmpl{
 			{
-				tmpls.ModelsInit,
-				filepath.Join(MODEL_DIR, "init.go"),
-				tmplData{
+				text:     tmpls.ModelsInit,
+				filename: filepath.Join(MODEL_DIR, "init.go"),
+				data: tmplData{
 					"modelList": strings.Join(modelList, ", "),
 				},
 			},
@@ -99,7 +99,7 @@ model user, post
 	},
 }
 
-func getModelPtrs(dir string) ([]string, error) {
+func getModels(dir string) ([]string, error) {
 	var result []string
 	// 读取目录内容
 	entries, err := os.ReadDir(dir)

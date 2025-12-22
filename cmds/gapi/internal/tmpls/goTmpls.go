@@ -12,7 +12,7 @@ type putBody struct {
 	{{.Name}} {{if .IsNonRef}}*{{end}}{{.Type}} {{.Tag}}{{end}}
 }
 
-func bodyToModel(body putBody) (model models.{{.modelName}}, cols []string) {
+func bodyToModel(body putBody) (model {{.modelName}}, cols []string) {
 {{range .fields}}if body.{{.Name}} != nil {
 		cols = append(cols, "{{.Col}}")
 		model.{{.Name}} = {{if .IsNonRef}}*{{end}}body.{{.Name}}
@@ -86,21 +86,45 @@ func get(ctx *gin.Context) {
 
 var ResourceRouters = `package {{.resource}}
 
-import (
-	gin "github.com/gin-gonic/gin"
-)
+func crudRouters() {
+	router.OPTIONS("", nil)       // OPTIONS
+	router.OPTIONS(":id", nil)    // OPTIONS
+	router.POST("", create)       // 增
+	router.DELETE(":id", delete)  // 删单id
+	router.DELETE("", deleteMany) // 删多id
+	router.PUT(":id", update)     // 改单id
+	router.PUT("", updateMany)    // 改多id
+	router.GET(":id", getOne)     // 查单id
+	router.GET("", get)           // 查多id,或过滤条件
+}
 
+`
+
+var ResourceSetup = `package {{.resource}}
+
+import "github.com/gin-gonic/gin"
+
+
+// 自定义路由
+func routers() {
+	// router.GET("path", func(c *gin.Context) {})
+}
+
+// 资源中间件
+var middlewares = []gin.HandlerFunc{}
+
+// 资源路由
+var router *gin.RouterGroup
+
+// 设置资源路由
 func SetupRouter(g *gin.RouterGroup) {
-	group := g.Group("{{.resource}}")
-	group.OPTIONS("", nil)       // OPTIONS
-	group.OPTIONS(":id", nil)    // OPTIONS
-	group.POST("", create)       // 增
-	group.DELETE(":id", delete)  // 删单id
-	group.DELETE("", deleteMany) // 删多id
-	group.PUT(":id", update)     // 改单id
-	group.PUT("", updateMany)    // 改多id
-	group.GET(":id", getOne)     // 查单id
-	group.GET("", get)           // 查多id,或过滤条件
+	// 资源路由组
+	router = g.Group("{{.resource}}", middlewares...)
+	// CRUD路由
+	crudRouters()
+
+	// 自定义路由
+	routers()
 }
 
 `
@@ -196,43 +220,60 @@ func init() {
 
 var HandlersInit = `package handlers
 
-func init() {
-	// routers
-	routers()
-}
-
-`
-
-var HandlersRouters = `package handlers
-
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hun9k/gapi/base"
 	"github.com/hun9k/gapi/services/api"
 )
 
-func routers() {
-	// group
-	v1 := api.Router().Group("") // .Group("v1")
-	{
-		// platform group
-		platform := v1.Group("platform")
-		platform.Use(base.CorsDefault())
-		{
-			// setup resource routers
-		}
-	}
-
+func init() {
 	// ping
+	ping() //
+}
+
+func ping() {
 	api.Router().GET("ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
-			"message": "pong",
+			"message": "pong! GAPI is running",
 		})
 	})
 }
 
+`
+
+var PlatformSetup = `package handlers
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/hun9k/gapi/base"
+)
+
+const {{.platform}}RouterVerion = ""
+const {{.platform}}RouterPrefix = "{{.platform}}"
+
+// 中间件列表
+var {{.platform}}Middlewares = []gin.HandlerFunc{
+	base.CorsDefault(),
+}`
+
+var PlatformRouters = `package handlers
+{{$platform := .platform}}{{$modPath := .modPath}}
+import (
+	{{range .resources}}"{{$modPath}}/handlers{{if $platform}}/{{$platform}}{{end}}/{{.}}"
+{{end}}
+	"github.com/hun9k/gapi/services/api"
+)
+
+func init() {
+	// platform group
+	platform := api.Router().Group({{.platform}}RouterVerion).Group({{.platform}}RouterPrefix)
+	platform.Use({{.platform}}Middlewares...)
+
+	// setup resource routers
+	{{range .resources}}{{.}}.SetupRouter(platform)
+{{end}}
+}
 `
 
 const Main = `package main
