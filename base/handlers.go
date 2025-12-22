@@ -16,9 +16,9 @@ func Create[M any](ctx *gin.Context) {
 	item := new(M)
 	if err := ctx.ShouldBind(&item); err != nil {
 		log.Info("get bind body error", "path", ctx.Request.URL.Path, "error", err)
-		ctx.JSON(http.StatusBadRequest, Resp{
-			Error:   1,
-			Message: err.Error(),
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   1,
+			"message": err.Error(),
 		})
 		return
 	}
@@ -113,7 +113,7 @@ func Update[M any](ctx *gin.Context, model M, cols []string) {
 	}
 
 	// update row
-	if _, err := dao.UpdateRow(dao.MkOpt(), model, req.ID, cols); err != nil {
+	if _, err := dao.UpdateRow(dao.MkOpt(), &model, req.ID, cols); err != nil {
 		log.Info("update error", "path", ctx.Request.URL.Path, "error", err)
 		ctx.JSON(http.StatusInternalServerError, Resp{
 			Error:   2,
@@ -123,6 +123,7 @@ func Update[M any](ctx *gin.Context, model M, cols []string) {
 	}
 
 	// response
+	model, _ = dao.SelectRow[M](dao.MkOpt(), req.ID)
 	ctx.JSON(http.StatusOK, model)
 }
 

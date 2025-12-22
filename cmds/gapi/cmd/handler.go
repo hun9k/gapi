@@ -5,6 +5,8 @@ The MIT License (MIT)
 package cmd
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -13,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/iancoleman/strcase"
@@ -45,48 +48,7 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		// platform init
-		// 生成目录
-		dirs := []string{
-			filepath.Join("handlers", *hf_plat),
-		}
-		for i, err := range genDirs(dirs) {
-			if err != nil {
-				slog.Error("创建平台目录失败", "dir", dirs[i], "error", err)
-				continue
-			}
-			slog.Info("创建平台目录成功", "dir", dirs[i])
-		}
-		// 平台代码
-		pSetup := "setup.go"
-		if *hf_plat != "" {
-			pSetup = *hf_plat + "_" + pSetup
-		}
-		pRouter := "routers_gen.go"
-		if *hf_plat != "" {
-			pRouter = *hf_plat + "_" + pRouter
-		}
-		codeTmpls := []codeTmpl{
-			{
-				text:     tmpls.PlatformSetup,
-				filename: filepath.Join("handlers", pSetup),
-				data:     tmplData{"platform": *hf_plat},
-				isKeep:   true,
-			},
-			{
-				text:     tmpls.PlatformRouters,
-				filename: filepath.Join("handlers", pRouter),
-				data:     tmplData{"platform": *hf_plat, "modPath": mod.Module.Mod.Path, "resources": getPlatRes(filepath.Join("handlers", *hf_plat))},
-			},
-		}
-		for i, err := range genCodes(codeTmpls, *hf_force) {
-			if err != nil {
-				slog.Error("生成平台代码失败", "filename", codeTmpls[i].filename, "error", err)
-				continue
-			}
-			slog.Info("生成平台代码成功", "filename", codeTmpls[i].filename)
-		}
-
+		// 生成资源相关代码
 		for _, resource := range args {
 			// 生成资源目录
 			dirs := []string{
@@ -139,9 +101,36 @@ to quickly create a Cobra application.`,
 				}
 				slog.Info("生成代码成功", "filename", codeTmpls[i].filename)
 			}
+		}
 
-			// 注册路由
-			slog.Info("应在handlers/routers.go中添加路由")
+		// 平台代码
+		pSetup := "setup.go"
+		if *hf_plat != "" {
+			pSetup = *hf_plat + "_" + pSetup
+		}
+		pRouter := "routers_gen.go"
+		if *hf_plat != "" {
+			pRouter = *hf_plat + "_" + pRouter
+		}
+		codeTmpls := []codeTmpl{
+			{
+				text:     tmpls.PlatformSetup,
+				filename: filepath.Join("handlers", pSetup),
+				data:     tmplData{"platform": *hf_plat, "secretKey": mkSecretKey()},
+				isKeep:   true,
+			},
+			{
+				text:     tmpls.PlatformRouters,
+				filename: filepath.Join("handlers", pRouter),
+				data:     tmplData{"platform": *hf_plat, "modPath": mod.Module.Mod.Path, "resources": getPlatRes(filepath.Join("handlers", *hf_plat))},
+			},
+		}
+		for i, err := range genCodes(codeTmpls, *hf_force) {
+			if err != nil {
+				slog.Error("生成平台代码失败", "filename", codeTmpls[i].filename, "error", err)
+				continue
+			}
+			slog.Info("生成平台代码成功", "filename", codeTmpls[i].filename)
 		}
 
 		if err := modTidy(); err != nil {
@@ -149,6 +138,14 @@ to quickly create a Cobra application.`,
 			return
 		}
 	},
+}
+
+func mkSecretKey() string {
+	key := make([]byte, 32) // 生成32字节（256位）的密钥
+	rand.Read(key)
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(key)))
+	base64.StdEncoding.Encode(dst, key)
+	return string(dst)
 }
 
 func getPlatRes(dir string) []string {
@@ -161,7 +158,7 @@ func getPlatRes(dir string) []string {
 	// 遍历目录中的每个条目
 	for _, entry := range entries {
 		// 只处理文件，跳过目录
-		if !entry.IsDir() || entry.Name() == "." || entry.Name() == ".." {
+		if !entry.IsDir() || entry.Name() == "." || entry.Name() == ".." || strings.HasPrefix(entry.Name(), "p_") {
 			continue
 		}
 

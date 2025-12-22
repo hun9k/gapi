@@ -75,10 +75,8 @@ func Select[M any](o Option, conds ...any) ([]M, error) {
 }
 
 // 查单项
-func SelectRow[M any](o Option, id uint) (M, error) {
-	return gorm.G[M](o.db,
-		ID(id).Where(),
-	).First(o.ctx)
+func SelectRow[M any](o Option, id any) (M, error) {
+	return gorm.G[M](o.db).Where(id).First(o.ctx)
 }
 
 // 查列表

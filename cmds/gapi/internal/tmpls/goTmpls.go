@@ -34,19 +34,19 @@ import (
 	"github.com/hun9k/gapi/log"
 )
 
-func create(ctx *gin.Context) {
+func Create(ctx *gin.Context) {
 	base.Create[{{.modelName}}](ctx)
 }
 
-func delete(ctx *gin.Context) {
+func Delete(ctx *gin.Context) {
 	base.Delete[{{.modelName}}](ctx)
 }
 
-func deleteMany(ctx *gin.Context) {
+func DeleteMany(ctx *gin.Context) {
 	base.DeleteMany[{{.modelName}}](ctx)
 }
 
-func update(ctx *gin.Context) {
+func Update(ctx *gin.Context) {
 	// bind body
 	body := putBody{}
 	if err := ctx.ShouldBind(&body); err != nil {
@@ -60,7 +60,7 @@ func update(ctx *gin.Context) {
 	base.Update(ctx, model, cols)
 }
 
-func updateMany(ctx *gin.Context) {
+func UpdateMany(ctx *gin.Context) {
 	// bind body
 	body := putBody{}
 	if err := ctx.ShouldBind(&body); err != nil {
@@ -74,11 +74,11 @@ func updateMany(ctx *gin.Context) {
 	base.UpdateMany(ctx, model, cols)
 }
 
-func getOne(ctx *gin.Context) {
+func GetOne(ctx *gin.Context) {
 	base.GetOne[{{.modelName}}](ctx)
 }
 
-func get(ctx *gin.Context) {
+func Get(ctx *gin.Context) {
 	base.Get[{{.modelName}}](ctx)
 }
 
@@ -89,13 +89,13 @@ var ResourceRouters = `package {{.resource}}
 func crudRouters() {
 	router.OPTIONS("", nil)       // OPTIONS
 	router.OPTIONS(":id", nil)    // OPTIONS
-	router.POST("", create)       // 增
-	router.DELETE(":id", delete)  // 删单id
-	router.DELETE("", deleteMany) // 删多id
-	router.PUT(":id", update)     // 改单id
-	router.PUT("", updateMany)    // 改多id
-	router.GET(":id", getOne)     // 查单id
-	router.GET("", get)           // 查多id,或过滤条件
+	router.POST("", Create)       // 增
+	router.DELETE(":id", Delete)  // 删单id
+	router.DELETE("", DeleteMany) // 删多id
+	router.PUT(":id", Update)     // 改单id
+	router.PUT("", UpdateMany)    // 改多id
+	router.GET(":id", GetOne)     // 查单id
+	router.GET("", Get)           // 查多id,或过滤条件
 }
 
 `
@@ -220,26 +220,6 @@ func init() {
 
 var HandlersInit = `package handlers
 
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-	"github.com/hun9k/gapi/services/api"
-)
-
-func init() {
-	// ping
-	ping() //
-}
-
-func ping() {
-	api.Router().GET("ping", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "pong! GAPI is running",
-		})
-	})
-}
-
 `
 
 var PlatformSetup = `package handlers
@@ -249,13 +229,15 @@ import (
 	"github.com/hun9k/gapi/base"
 )
 
-const {{.platform}}RouterVerion = ""
-const {{.platform}}RouterPrefix = "{{.platform}}"
+const adminRouterVerion = ""
+const adminRouterPrefix = "{{.platform}}"
 
 // 中间件列表
-var {{.platform}}Middlewares = []gin.HandlerFunc{
+var adminMiddlewares = []gin.HandlerFunc{
 	base.CorsDefault(),
-}`
+}
+
+`
 
 var PlatformRouters = `package handlers
 {{$platform := .platform}}{{$modPath := .modPath}}
