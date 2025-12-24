@@ -17,20 +17,7 @@ func Router() *gin.Engine {
 
 // http listen
 func Listen() {
-	// http diabled
-	if !conf.Get[bool]("api.enable") {
-		log.Info("API service is not enabled")
-		return
-	}
-
 	wg := &sync.WaitGroup{}
-	// http/2 or http/1.1 with no tls
-	wg.Go(func() {
-		log.Info("HTTP will listen", "addr", conf.Get[string]("api.addr"))
-		if err := http.ListenAndServe(conf.Get[string]("api.addr"), handler.Inst(API_HANDLER_NAME)); err != nil {
-			log.Error("HTTP listen error", "error", err)
-		}
-	})
 
 	if conf.Get[bool]("api.tls.enable") {
 		// http/2 or http/1.1 with tls
@@ -38,6 +25,14 @@ func Listen() {
 			log.Info("HTTPS will listen", "addr", conf.Get[string]("api.tls.addr"))
 			if err := http.ListenAndServeTLS(conf.Get[string]("api.tls.addr"), conf.Get[string]("api.tls.certfile"), conf.Get[string]("api.tls.keyfile"), handler.Inst(API_HANDLER_NAME)); err != nil {
 				log.Error("HTTPS listen error", "error", err)
+			}
+		})
+	} else {
+		// http/2 or http/1.1 with no tls
+		wg.Go(func() {
+			log.Info("HTTP will listen", "addr", conf.Get[string]("api.addr"))
+			if err := http.ListenAndServe(conf.Get[string]("api.addr"), handler.Inst(API_HANDLER_NAME)); err != nil {
+				log.Error("HTTP listen error", "error", err)
 			}
 		})
 	}

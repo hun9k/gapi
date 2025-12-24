@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/iancoleman/strcase"
 	"github.com/spf13/cobra"
 )
@@ -34,75 +34,40 @@ model user, post
 			return
 		}
 
-		// models dir
-		dirs := []string{
-			filepath.Join(MODEL_DIR),
-		}
-		for i, err := range genDirs(dirs) {
-			if err != nil {
-				slog.Error("创建目录失败", "dir", dirs[i], "error", err)
-				continue
-			}
-			slog.Info("创建目录成功", "dir", dirs[i])
-		}
-
-		codeTmpls := make([]codeTmpl, len(args))
-		for i, resource := range args {
-			codeTmpls[i] = codeTmpl{
-				text:     tmpls.ResourceModel,
-				filename: filepath.Join(MODEL_DIR, resource+GO_EXT),
-				data: tmplData{
-					"package":  MODEL_DIR,
-					"model":    strcase.ToCamel(resource),
-					"resource": resource,
-				},
-			}
-		}
-
-		// generate codes
-		for i, err := range genCodes(codeTmpls, *mf_force) {
-			if err != nil {
-				slog.Error("生成模型失败", "filename", codeTmpls[i].filename, "error", err)
-				continue
-			}
-			slog.Info("生成模型成功", "filename", codeTmpls[i].filename)
-		}
-
-		// generate migrate init
-		modelList, err := getModels(MODEL_DIR)
+		appPath, err := os.Getwd()
 		if err != nil {
-			slog.Error("获取模型名列表失败", "error", err)
+			slog.Error("获取当前工作目录失败", "error", err)
 			return
 		}
-		codeTmpls = []codeTmpl{
-			{
-				text:     tmpls.ModelsInit,
-				filename: filepath.Join(MODEL_DIR, "init.go"),
-				data: tmplData{
-					"modelList": strings.Join(modelList, ", "),
-				},
-			},
+
+		// 创建模型目录
+		modelPath := filepath.Join(appPath, MODEL_DIR)
+		if err := MkDir(modelPath); err != nil {
+			slog.Error("创建模型目录：失败", "dir", MODEL_DIR, "error", err)
+			return
 		}
-		for i, err := range genCodes(codeTmpls, true) {
-			if err != nil {
-				slog.Error("生成模型init失败", "filename", codeTmpls[i].filename, "error", err)
-				continue
-			}
-			slog.Info("生成模型init成功", "filename", codeTmpls[i].filename)
+		slog.Info("创建模型目录", "dir", modelPath)
+
+		// 生成模型文件
+		for _, res := range args {
+			GenModel(res)
 		}
 
+		// 更新模型init
+		SetModelInit(modelPath)
+
 		// mod tidy
-		if err := modTidy(); err != nil {
+		if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
 			slog.Error("mod tidy失败", "error", err)
 			return
 		}
 	},
 }
 
-func getModels(dir string) ([]string, error) {
+func getModels(path string) ([]string, error) {
 	var result []string
 	// 读取目录内容
-	entries, err := os.ReadDir(dir)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
@@ -133,11 +98,6 @@ func getModels(dir string) ([]string, error) {
 	return result, nil
 }
 
-var (
-	mf_force *bool
-	mf_op    *string
-)
-
 func init() {
 	rootCmd.AddCommand(modelCmd)
 
@@ -149,6 +109,4 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	mf_force = modelCmd.Flags().BoolP("force", "f", false, "文件存在时也强制生成")
-	mf_op = modelCmd.Flags().StringP("op", "o", "create", "操作类型，create，或init")
 }

@@ -1,6 +1,6 @@
 package tmpls
 
-var ResourceMessages = `package {{.resource}}
+const ResMessages = `package {{.resource}}
 
 import (
 	"{{.modPath}}/models"
@@ -23,7 +23,7 @@ func bodyToModel(body putBody) (model {{.modelName}}, cols []string) {
 
 `
 
-var ResourceHandlers = `package {{.resource}}
+const ResHandlers = `package {{.resource}}
 
 import (
 	"{{.modPath}}/models"
@@ -84,52 +84,43 @@ func Get(ctx *gin.Context) {
 
 `
 
-var ResourceRouters = `package {{.resource}}
-
-func crudRouters() {
-	router.OPTIONS("", nil)       // OPTIONS
-	router.OPTIONS(":id", nil)    // OPTIONS
-	router.POST("", Create)       // 增
-	router.DELETE(":id", Delete)  // 删单id
-	router.DELETE("", DeleteMany) // 删多id
-	router.PUT(":id", Update)     // 改单id
-	router.PUT("", UpdateMany)    // 改多id
-	router.GET(":id", GetOne)     // 查单id
-	router.GET("", Get)           // 查多id,或过滤条件
-}
-
-`
-
-var ResourceSetup = `package {{.resource}}
+const ResRouters = `package {{.resource}}
 
 import "github.com/gin-gonic/gin"
 
-
-// 自定义路由
-func routers() {
-	// router.GET("path", func(c *gin.Context) {})
+func crudRouters(group *gin.RouterGroup) {
+	group.OPTIONS("", nil)       // OPTIONS
+	group.OPTIONS(":id", nil)    // OPTIONS
+	group.POST("", Create)       // 增
+	group.DELETE(":id", Delete)  // 删单id
+	group.DELETE("", DeleteMany) // 删多id
+	group.PUT(":id", Update)     // 改单id
+	group.PUT("", UpdateMany)    // 改多id
+	group.GET(":id", GetOne)     // 查单id
+	group.GET("", Get)           // 查多id,或过滤条件
 }
+`
+
+const ResSetup = `package {{.resource}}
+
+import "github.com/gin-gonic/gin"
 
 // 资源中间件
 var middlewares = []gin.HandlerFunc{}
 
-// 资源路由
-var router *gin.RouterGroup
-
 // 设置资源路由
-func SetupRouter(g *gin.RouterGroup) {
-	// 资源路由组
-	router = g.Group("{{.resource}}", middlewares...)
+func SetupRouter(group *gin.RouterGroup) {
+	g := group.Group("{{.routerPrefix}}", middlewares...)
+
 	// CRUD路由
-	crudRouters()
-
+	crudRouters(g)
+	
 	// 自定义路由
-	routers()
+	{{if ne .resource "user"}}// {{end}}routers(g)
 }
-
 `
 
-var ResourceModel = `package {{.package}}
+const ResModel = `package {{.package}}
 
 import base "github.com/hun9k/gapi/base"
 
@@ -142,6 +133,17 @@ type {{.model}} struct {
 // TableName 指定表名
 // func (p *{{.model}}) TableName() string {
 //     return "{{.resource}}"
+// }
+
+// Save 相关钩子函数：
+// BeforeSave 保存前的钩子
+// func (p *{{.model}}) BeforeSave(tx *gorm.DB) error {
+//     return nil
+// }
+//
+// AfterSave 保存后的钩子
+// func (p *{{.model}}) AfterSave(tx *gorm.DB) error {
+//     return nil
 // }
 
 // Create 相关钩子函数：
@@ -166,17 +168,6 @@ type {{.model}} struct {
 //     return nil
 // }
 
-// Save 相关钩子函数：
-// BeforeSave 保存前的钩子
-// func (p *{{.model}}) BeforeSave(tx *gorm.DB) error {
-//     return nil
-// }
-//
-// AfterSave 保存后的钩子
-// func (p *{{.model}}) AfterSave(tx *gorm.DB) error {
-//     return nil
-// }
-
 // Delete 相关钩子函数：
 // BeforeDelete 删除前的钩子
 // func (p *{{.model}}) BeforeDelete(tx *gorm.DB) error {
@@ -196,7 +187,7 @@ type {{.model}} struct {
 
 `
 
-var ModelsInit = `package models
+const ModelsInit = `package models
 
 import (
 	"github.com/hun9k/gapi/conf"
@@ -218,28 +209,32 @@ func init() {
 
 `
 
-var HandlersInit = `package handlers
-
-`
-
-var PlatformSetup = `package handlers
+const PlatSetup = `package handlers
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/hun9k/gapi/base"
 )
 
-const adminRouterVerion = ""
-const adminRouterPrefix = "{{.platform}}"
+const {{.platform}}RouterVerion = ""
+const {{.platform}}RouterPrefix = "{{.platform}}"
+
+{{if .user}}
+// 非认证路由
+var noCheckAuthPaths = map[string]struct{}{
+	"{{if .platform}}/{{.platform}}{{end}}/{{.user}}/login": {},
+}
+{{end}}
 
 // 中间件列表
-var adminMiddlewares = []gin.HandlerFunc{
+var {{.platform}}Middlewares = []gin.HandlerFunc{
 	base.CorsDefault(),
+{{if .user}}	base.AuthDefault(noCheckAuthPaths),{{end}}
 }
 
 `
 
-var PlatformRouters = `package handlers
+const PlatRouters = `package handlers
 {{$platform := .platform}}{{$modPath := .modPath}}
 import (
 	{{range .resources}}"{{$modPath}}/handlers{{if $platform}}/{{$platform}}{{end}}/{{.}}"
@@ -258,10 +253,31 @@ func init() {
 }
 `
 
+const TasksInit = `package tasks
+
+`
+
+const HandlersInit = `package handlers
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/hun9k/gapi/services/api"
+)
+
+func init() {
+	api.Router().GET("ping", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"message": "pong"})
+	})
+}
+
+`
+
 const Main = `package main
 
 import (
-	// 初始化路由
+	// API, Task init
 	_ "{{.modPath}}/handlers"
 
 	"github.com/hun9k/gapi/app"

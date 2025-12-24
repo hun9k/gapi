@@ -13,11 +13,11 @@ import (
 	"go/token"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/hun9k/gapi/cmds/gapi/internal/tmpls"
 	"github.com/iancoleman/strcase"
 	"github.com/spf13/cobra"
 )
@@ -41,100 +41,36 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		appPath, err := os.Getwd()
+		if err != nil {
+			slog.Error("获取当前工作目录失败", "error", err)
+			return
+		}
+
 		// 读取go.mod
-		mod, err := modFile("go.mod")
+		mod, err := ModFile(filepath.Join(appPath, "go.mod"))
 		if err != nil {
 			slog.Error("读取go.mod失败", "error", err)
 			return
 		}
 
 		// 生成资源相关代码
-		for _, resource := range args {
-			// 生成资源目录
-			dirs := []string{
-				filepath.Join("handlers", *hf_plat, resource),
-			}
-			for i, err := range genDirs(dirs) {
-				if err != nil {
-					slog.Error("创建目录失败", "dir", dirs[i], "error", err)
-					continue
-				}
-				slog.Info("创建目录成功", "dir", dirs[i])
-			}
-
-			// 生成messages
-			fields, err := ParseModel(resource)
-			if err != nil {
-				slog.Error("解析模型失败", "error", err)
+		for _, res := range args {
+			// 生成资源相关代码
+			if err := GenHandler(appPath, mod, res); err != nil {
 				continue
 			}
-			// 生成handlers
-			// 生成routers
-			modelName := "models." + strcase.ToCamel(resource)
-			codeTmpls := []codeTmpl{
-				{
-					text:     tmpls.ResourceMessages,
-					filename: filepath.Join("handlers", *hf_plat, resource, "messages_gen.go"),
-					data:     tmplData{"resource": resource, "fields": fields, "modelName": modelName, "modPath": mod.Module.Mod.Path, "iTime": iTime, "iSql": iSql, "iDatatypes": iDatatypes},
-				},
-				{
-					text:     tmpls.ResourceHandlers,
-					filename: filepath.Join("handlers", *hf_plat, resource, "handlers_gen.go"),
-					data:     tmplData{"resource": resource, "modelName": modelName, "modPath": mod.Module.Mod.Path},
-				},
-				{
-					text:     tmpls.ResourceRouters,
-					filename: filepath.Join("handlers", *hf_plat, resource, "routers_gen.go"),
-					data:     tmplData{"resource": resource},
-				},
-				{
-					text:     tmpls.ResourceSetup,
-					filename: filepath.Join("handlers", *hf_plat, resource, "setup.go"),
-					data:     tmplData{"resource": resource},
-					isKeep:   true,
-				},
-			}
-			for i, err := range genCodes(codeTmpls, *hf_force) {
-				if err != nil {
-					slog.Error("生成代码失败", "filename", codeTmpls[i].filename, "error", err)
-					continue
-				}
-				slog.Info("生成代码成功", "filename", codeTmpls[i].filename)
-			}
-		}
 
-		// 平台代码
-		pSetup := "setup.go"
-		if *hf_plat != "" {
-			pSetup = *hf_plat + "_" + pSetup
-		}
-		pRouter := "routers_gen.go"
-		if *hf_plat != "" {
-			pRouter = *hf_plat + "_" + pRouter
-		}
-		codeTmpls := []codeTmpl{
-			{
-				text:     tmpls.PlatformSetup,
-				filename: filepath.Join("handlers", pSetup),
-				data:     tmplData{"platform": *hf_plat, "secretKey": mkSecretKey()},
-				isKeep:   true,
-			},
-			{
-				text:     tmpls.PlatformRouters,
-				filename: filepath.Join("handlers", pRouter),
-				data:     tmplData{"platform": *hf_plat, "modPath": mod.Module.Mod.Path, "resources": getPlatRes(filepath.Join("handlers", *hf_plat))},
-			},
-		}
-		for i, err := range genCodes(codeTmpls, *hf_force) {
-			if err != nil {
-				slog.Error("生成平台代码失败", "filename", codeTmpls[i].filename, "error", err)
+			// 设置平台相关代码
+			if err := SetPlat(appPath, mod, res); err != nil {
 				continue
 			}
-			slog.Info("生成平台代码成功", "filename", codeTmpls[i].filename)
 		}
 
-		if err := modTidy(); err != nil {
-			slog.Error("mod tidy失败", "error", err)
+		// 执行go mod tidy
+		slog.Info("执行go mod tidy")
+		if err := exec.Command("go", "mod", "tidy").Run(); err != nil {
+			slog.Error("执行go mod tidy：失败", "error", err)
 			return
 		}
 	},
@@ -327,11 +263,6 @@ func parseArrayLength(lenExpr ast.Expr) (int64, error) {
 	return -1, fmt.Errorf("未找到数组长度")
 }
 
-var (
-	hf_plat  *string
-	hf_force *bool
-)
-
 func init() {
 	rootCmd.AddCommand(handlerCmd)
 
@@ -344,6 +275,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// genhandlerCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	hf_force = handlerCmd.Flags().BoolP("force", "f", false, "强制生成")
-	hf_plat = handlerCmd.Flags().StringP("platform", "p", "", "选择平台")
 }
